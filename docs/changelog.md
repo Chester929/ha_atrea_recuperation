@@ -1,4 +1,4 @@
-## v1.0.7 — 2026-01-08
+## v1.0.8 — 2026-01-08
 
 **Bug fix: Modbus hub access (PR #TBD)**
 
