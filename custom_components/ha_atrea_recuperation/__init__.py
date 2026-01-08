@@ -13,7 +13,10 @@ set `modbus_hub` to the name of that hub. It exposes:
 from __future__ import annotations
 
 import logging
+from typing import Any
+
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .hub import HaAtreaModbusHub
 from .climate import HaAtreaClimate
