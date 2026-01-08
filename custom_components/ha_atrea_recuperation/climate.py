@@ -8,14 +8,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import (
-    HVAC_MODE_OFF,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_AUTO,
-    ClimateEntityFeature,
-)
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
+from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
@@ -34,7 +28,7 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def temperature_unit(self) -> str:
-        return UnitOfTemperature.CELSIUS
+        return self.hass.config.units.temperature_unit
 
     @property
     def current_temperature(self) -> Optional[float]:
@@ -56,23 +50,23 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_modes(self):
-        return [HVAC_MODE_OFF, HVAC_MODE_AUTO, HVAC_MODE_HEAT]
+        return [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT]
 
     @property
     def hvac_mode(self):
         if self.coordinator.data is None:
-            return HVAC_MODE_OFF
+            return HVACMode.OFF
         dev_mode_val = self.coordinator.data.get(1001)
         if dev_mode_val is None:
-            return HVAC_MODE_OFF
+            return HVACMode.OFF
         dev_mode = int(dev_mode_val)
         if dev_mode == 0:
-            return HVAC_MODE_OFF
+            return HVACMode.OFF
         if dev_mode == 1:
-            return HVAC_MODE_AUTO
+            return HVACMode.AUTO
         if dev_mode in (5, 6, 7):
-            return HVAC_MODE_HEAT
-        return HVAC_MODE_AUTO
+            return HVACMode.HEAT
+        return HVACMode.AUTO
 
     @property
     def supported_features(self) -> ClimateEntityFeature:
@@ -86,9 +80,9 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: str):
         inv = {
-            HVAC_MODE_OFF: 0,
-            HVAC_MODE_AUTO: 1,
-            HVAC_MODE_HEAT: 5,
+            HVACMode.OFF: 0,
+            HVACMode.AUTO: 1,
+            HVACMode.HEAT: 5,
         }
         val = inv.get(hvac_mode, 1)
         await self._hub.write_holding(1001, int(val))
