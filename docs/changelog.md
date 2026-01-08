@@ -1,3 +1,21 @@
+## v1.0.7 — 2026-01-08
+
+**Bug fix: Modbus hub access (PR #TBD)**
+
+Fixed critical issue where integration could not read/write values when using Home Assistant's Modbus integration (`modbus_hub` configuration).
+
+**Changes:**
+- Fixed modbus hub access to use correct `async_pb_call()` API instead of calling methods directly
+- Implemented lazy hub retrieval to avoid initialization race conditions
+- Updated register read/write operations to use proper call types (`read_input_registers`, `read_holding_registers`, `write_register`, `write_coil`)
+- Maintained backward compatibility with pymodbus fallback mode
+
+**User impact:**
+- Entities now properly load values when using `modbus_hub` configuration
+- Climate, sensor, fan, and other entities display current values correctly
+- Control actions (setting temperature, fan speed, modes) now work as expected
+- No configuration changes required — existing configurations will work after upgrade
+
 ## v1.0.6 — 2026-01-08
 
 **Major refactor: Platform-based architecture (PR #2)**
