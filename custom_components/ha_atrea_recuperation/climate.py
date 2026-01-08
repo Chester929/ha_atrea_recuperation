@@ -8,7 +8,21 @@ from __future__ import annotations
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+DOMAIN = "ha_atrea_recuperation"
+
+
+async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
+    """Set up the climate platform."""
+    # Get data from hass.data
+    hub = hass.data[DOMAIN]["hub"]
+    coordinator = hass.data[DOMAIN]["coordinator"]
+    name = hass.data[DOMAIN]["name"]
+
+    # Create climate entity
+    async_add_entities([HaAtreaClimate(coordinator, hub, name)])
 
 
 class HaAtreaClimate(CoordinatorEntity, ClimateEntity):

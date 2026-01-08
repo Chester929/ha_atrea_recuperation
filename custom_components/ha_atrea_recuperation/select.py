@@ -3,7 +3,21 @@
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+DOMAIN = "ha_atrea_recuperation"
+
+
+async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
+    """Set up the select platform."""
+    # Get data from hass.data
+    hub = hass.data[DOMAIN]["hub"]
+    coordinator = hass.data[DOMAIN]["coordinator"]
+    name = hass.data[DOMAIN]["name"]
+
+    # Create select entity for operation mode
+    async_add_entities([OperationModeSelect(coordinator, hub, f"{name} Operation Mode")])
 
 
 class OperationModeSelect(CoordinatorEntity, SelectEntity):
