@@ -133,7 +133,7 @@ class HaAtreaModbusHub:
                 # Try reading as input register first
                 try:
                     result = await ha_hub.async_pb_call(
-                        self.unit, address, 1, "read_input_registers"
+                        self.unit, address, 1, "input"
                     )
                     _LOGGER.debug("HA hub read_input_registers result for %s: %s", address, getattr(result, "registers", result))
                     if result and hasattr(result, "registers") and result.registers:
@@ -144,7 +144,7 @@ class HaAtreaModbusHub:
                 # Try reading as holding register
                 try:
                     result = await ha_hub.async_pb_call(
-                        self.unit, address, 1, "read_holding_registers"
+                        self.unit, address, 1, "holding"
                     )
                     _LOGGER.debug("HA hub read_holding_registers result for %s: %s", address, getattr(result, "registers", result))
                     if result and hasattr(result, "registers") and result.registers:
