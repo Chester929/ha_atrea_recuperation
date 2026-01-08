@@ -6,12 +6,11 @@
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, Optional
 from datetime import timedelta
 import logging
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_time_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +52,6 @@ class HaAtreaModbusHub:
 
         # cache for registers
         self._cache: Dict[int, Any] = {}
-        self._subs: List[Callable] = []
 
         # try to find HA modbus hub if provided
         self._ha_modbus_hub = None
@@ -63,26 +61,11 @@ class HaAtreaModbusHub:
             except Exception:
                 self._ha_modbus_hub = None
 
-    def subscribe(self, callback: Callable) -> None:
-        if callback not in self._subs:
-            self._subs.append(callback)
-
-    def _notify(self) -> None:
-        for cb in list(self._subs):
-            try:
-                cb()
-            except Exception:
-                _LOGGER.exception("Error notifying subscriber")
-
-    async def async_start(self) -> None:
-        """Start polling loop."""
-        async_track_time_interval(self.hass, self._async_poll, self.poll_interval)
-        await self._async_poll(None)
-
-    async def _async_poll(self, now) -> None:
+    async def async_update(self) -> Dict[int, Any]:
         """Poll a set of registers and update cache.
 
         The list below reflects the input and holding registers present in the document.
+        This method is called by DataUpdateCoordinator.
         """
         try:
             registers_to_poll = [
@@ -101,9 +84,10 @@ class HaAtreaModbusHub:
                 val = await self._read_register(reg)
                 if val is not None:
                     self._cache[int(reg)] = val
-            self._notify()
+            return self._cache
         except Exception:
             _LOGGER.exception("Error in polling loop")
+            return self._cache
 
     async def _read_register(self, address: int) -> Any:
         """Read a single register using the HA Modbus hub if available, else pymodbus fallback."""
@@ -152,12 +136,17 @@ class HaAtreaModbusHub:
             if self._ha_modbus_hub and hasattr(self._ha_modbus_hub, "write_register"):
                 ok = await self.hass.async_add_executor_job(self._ha_modbus_hub.write_register, address, int(value), self.unit)
                 if ok:
+                    # Update cache immediately for optimistic updates
+                    self._cache[int(address)] = int(value)
                     return True
             # Fallback to pymodbus
             if not self.host:
                 _LOGGER.error("No host configured for pymodbus fallback")
                 return False
             ok = await self.hass.async_add_executor_job(_pymodbus_write_register, self.host, self.port, self.unit, int(address), int(value))
+            if ok:
+                # Update cache immediately for optimistic updates
+                self._cache[int(address)] = int(value)
             return bool(ok)
         except Exception:
             _LOGGER.exception("Error writing holding register %s", address)

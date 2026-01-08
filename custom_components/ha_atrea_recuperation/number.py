@@ -4,12 +4,25 @@ from __future__ import annotations
 
 from typing import Optional
 from homeassistant.components.number import NumberEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
-class HaAtreaNumber(NumberEntity):
+class HaAtreaNumber(CoordinatorEntity, NumberEntity):
     """Number entity mapping to a holding register."""
 
-    def __init__(self, hub, name: str, register: int, scale: float = 1.0, unit: str | None = None, writable: bool = False, min_value: float | None = None, max_value: float | None = None) -> None:
+    def __init__(
+        self,
+        coordinator,
+        hub,
+        name: str,
+        register: int,
+        scale: float = 1.0,
+        unit: str | None = None,
+        writable: bool = False,
+        min_value: float | None = None,
+        max_value: float | None = None
+    ) -> None:
+        super().__init__(coordinator)
         self._hub = hub
         self._name = name
         self._register = int(register)
@@ -18,16 +31,11 @@ class HaAtreaNumber(NumberEntity):
         self._writable = writable
         self._min = min_value
         self._max = max_value
-        self._unique_id = f"ha_atrea_number_{self._register}_{name.replace(' ', '_').lower()}"
-        self._hub.subscribe(self._async_write_ha_state)
+        self._attr_unique_id = f"ha_atrea_number_{self._register}_{name.replace(' ', '_').lower()}"
 
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def unique_id(self) -> str:
-        return self._unique_id
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -35,21 +43,22 @@ class HaAtreaNumber(NumberEntity):
 
     @property
     def native_value(self) -> Optional[float]:
-        v = self._hub.get_cached(self._register)
+        if self.coordinator.data is None:
+            return None
+        v = self.coordinator.data.get(self._register)
         if v is None:
             return None
         return float(v) / self._scale
 
     @property
-    def min_value(self) -> float | None:
-        return self._min
+    def native_min_value(self) -> float:
+        return self._min if self._min is not None else 0.0
 
     @property
-    def max_value(self) -> float | None:
-        return self._max
+    def native_max_value(self) -> float:
+        return self._max if self._max is not None else 100.0
 
     async def async_set_native_value(self, value: float) -> None:
         raw = int(round(float(value) * self._scale))
         await self._hub.write_holding(self._register, raw)
-        self._hub._cache[self._register] = raw
-        self.async_write_ha_state()
+        await self.coordinator.async_request_refresh()
