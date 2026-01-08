@@ -17,6 +17,7 @@ from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.entity_component import EntityComponent
 
 from .hub import HaAtreaModbusHub
 from .climate import HaAtreaClimate
@@ -169,8 +170,9 @@ async def async_setup(hass: HomeAssistant, config: dict):
     hass.data[DOMAIN]["hub"] = hub
     hass.data[DOMAIN]["coordinator"] = coordinator
 
-    async_add_entities = hass.helpers.entity_platform.async_add_entities
-    async_add_entities(entities)
+    # Use an EntityComponent to add entities (compatible with HA core patterns)
+    component = EntityComponent(_LOGGER, DOMAIN, hass)
+    await component.async_add_entities(entities)
 
     _LOGGER.info("HA Atrea Recuperation integration initialized")
     return True
