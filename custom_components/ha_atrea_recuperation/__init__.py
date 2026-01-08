@@ -123,8 +123,8 @@ async def async_setup(hass: HomeAssistant, config: dict):
         update_interval=timedelta(seconds=poll),
     )
 
-    # Perform initial refresh
-    await coordinator.async_config_entry_first_refresh()
+    # Perform initial refresh suitable for YAML-based integration
+    await coordinator.async_refresh()
 
     entities = []
 
@@ -170,7 +170,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
     hass.data[DOMAIN]["coordinator"] = coordinator
 
     async_add_entities = hass.helpers.entity_platform.async_add_entities
-    async_add_entities(entities, update_before_add=True)
+    async_add_entities(entities)
 
     _LOGGER.info("HA Atrea Recuperation integration initialized")
     return True

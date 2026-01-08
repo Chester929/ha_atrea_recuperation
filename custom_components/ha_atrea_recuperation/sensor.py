@@ -25,7 +25,6 @@ class HaAtreaSensor(CoordinatorEntity, SensorEntity):
         holding: bool = False
     ) -> None:
         super().__init__(coordinator)
-        self._hub = hub
         self._name = name
         self._register = int(register)
         self._scale = float(scale)

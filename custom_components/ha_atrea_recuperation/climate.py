@@ -75,7 +75,7 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
     async def async_set_temperature(self, **kwargs):
         if ATTR_TEMPERATURE in kwargs:
             temp = kwargs[ATTR_TEMPERATURE]
-            await self._hub.write_holding(1002, int(round(float(temp) * 10.0)))
+    def supported_features(self) -> int:
             await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: str):

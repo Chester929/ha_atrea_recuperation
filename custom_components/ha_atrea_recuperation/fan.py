@@ -38,7 +38,7 @@ class HaAtreaFan(CoordinatorEntity, FanEntity):
         return int(val)
 
     @property
-    def supported_features(self) -> FanEntityFeature:
+    def supported_features(self) -> int:
         return FanEntityFeature.SET_SPEED
 
     async def async_set_percentage(self, percentage: int) -> None:
