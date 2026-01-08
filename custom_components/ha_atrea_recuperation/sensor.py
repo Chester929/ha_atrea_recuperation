@@ -7,7 +7,51 @@ or build a serial string from character registers.
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import HOLDING_REGISTERS, INPUT_REGISTERS
+
+DOMAIN = "ha_atrea_recuperation"
+
+
+async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
+    """Set up the sensor platform."""
+    # Get data from hass.data
+    hub = hass.data[DOMAIN]["hub"]
+    coordinator = hass.data[DOMAIN]["coordinator"]
+    name = hass.data[DOMAIN]["name"]
+
+    entities = []
+
+    # Sensors from INPUT_REGISTERS
+    for reg, meta in INPUT_REGISTERS.items():
+        entities.append(
+            HaAtreaSensor(
+                coordinator,
+                hub,
+                f"{name} {meta['name']}",
+                reg,
+                scale=meta.get("scale", 1.0),
+                unit=meta.get("unit"),
+            )
+        )
+
+    # Sensors from HOLDING_REGISTERS (expose read-only)
+    for reg, meta in HOLDING_REGISTERS.items():
+        entities.append(
+            HaAtreaSensor(
+                coordinator,
+                hub,
+                f"{name} {meta['name']}",
+                reg,
+                scale=meta.get("scale", 1.0),
+                unit=meta.get("unit"),
+                holding=True,
+            )
+        )
+
+    async_add_entities(entities)
 
 
 class HaAtreaSensor(CoordinatorEntity, SensorEntity):

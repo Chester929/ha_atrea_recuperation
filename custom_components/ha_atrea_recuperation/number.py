@@ -3,8 +3,37 @@
 from __future__ import annotations
 
 from typing import Optional
+
 from homeassistant.components.number import NumberEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import HOLDING_REGISTERS
+
+DOMAIN = "ha_atrea_recuperation"
+
+
+async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
+    """Set up the number platform."""
+    # Get data from hass.data
+    hub = hass.data[DOMAIN]["hub"]
+    coordinator = hass.data[DOMAIN]["coordinator"]
+    name = hass.data[DOMAIN]["name"]
+
+    # Create number entity for target temperature (holding 1002)
+    async_add_entities([
+        HaAtreaNumber(
+            coordinator,
+            hub,
+            f"{name} Target Temperature",
+            1002,
+            scale=HOLDING_REGISTERS[1002]["scale"],
+            unit=HOLDING_REGISTERS[1002]["unit"],
+            writable=True,
+            min_value=-30.0,
+            max_value=90.0,
+        )
+    ])
 
 
 class HaAtreaNumber(CoordinatorEntity, NumberEntity):
