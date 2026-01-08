@@ -57,16 +57,37 @@ class HaAtreaModbusHub:
         self._ha_modbus_hub = None
 
     def _get_ha_modbus_hub(self):
-        """Get the HA Modbus hub from hass.data if available."""
-        if self._ha_modbus_hub is None and self.modbus_hub_name:
+        """Get the HA Modbus hub from hass.data if available.
+
+        This attempts multiple strategies:
+        - If hass.data['modbus'] is a dict and a name is configured, use it.
+        - Otherwise scan hass.data['modbus'] for a hub object with async_pb_call.
+        - As a last resort scan top-level hass.data values for an object with async_pb_call.
+        """
+        if self._ha_modbus_hub is None:
             try:
-                # Access the modbus hubs from hass.data using the HassKey pattern
-                # The actual key used by HA modbus is a HassKey object but accessed as "modbus"
                 modbus_hubs = self.hass.data.get("modbus")
                 if isinstance(modbus_hubs, dict):
-                    self._ha_modbus_hub = modbus_hubs.get(self.modbus_hub_name)
-                    if self._ha_modbus_hub:
-                        _LOGGER.debug("Found HA Modbus hub: %s", self.modbus_hub_name)
+                    if self.modbus_hub_name:
+                        hub = modbus_hubs.get(self.modbus_hub_name)
+                        if hub and hasattr(hub, "async_pb_call"):
+                            self._ha_modbus_hub = hub
+                            _LOGGER.debug("Found HA Modbus hub by name: %s", self.modbus_hub_name)
+                            return self._ha_modbus_hub
+                    # scan the dict for a candidate
+                    for k, v in modbus_hubs.items():
+                        if hasattr(v, "async_pb_call"):
+                            self._ha_modbus_hub = v
+                            _LOGGER.debug("Found HA Modbus hub by scanning modbus dict: %s", k)
+                            return self._ha_modbus_hub
+
+                # fallback: scan top-level hass.data for an object exposing async_pb_call
+                for k, v in self.hass.data.items():
+                    if hasattr(v, "async_pb_call"):
+                        self._ha_modbus_hub = v
+                        _LOGGER.debug("Found HA Modbus hub in hass.data key: %s", k)
+                        return self._ha_modbus_hub
+
             except Exception as ex:
                 _LOGGER.debug("Could not get HA Modbus hub: %s", ex)
         return self._ha_modbus_hub
@@ -94,6 +115,9 @@ class HaAtreaModbusHub:
                 val = await self._read_register(reg)
                 if val is not None:
                     self._cache[int(reg)] = val
+                    _LOGGER.debug("Cached register %s = %s", reg, val)
+                else:
+                    _LOGGER.debug("No value for register %s", reg)
             return self._cache
         except Exception:
             _LOGGER.exception("Error in polling loop")
@@ -105,29 +129,34 @@ class HaAtreaModbusHub:
             # Prefer HA Modbus hub
             ha_hub = self._get_ha_modbus_hub()
             if ha_hub and hasattr(ha_hub, "async_pb_call"):
+                _LOGGER.debug("Using HA Modbus hub for address %s (unit=%s)", address, self.unit)
                 # Try reading as input register first
                 try:
                     result = await ha_hub.async_pb_call(
                         self.unit, address, 1, "read_input_registers"
                     )
+                    _LOGGER.debug("HA hub read_input_registers result for %s: %s", address, getattr(result, "registers", result))
                     if result and hasattr(result, "registers") and result.registers:
                         return result.registers[0]
-                except Exception:
-                    pass
+                except Exception as ex:
+                    _LOGGER.debug("HA hub read_input_registers failed for %s: %s", address, ex)
 
                 # Try reading as holding register
                 try:
                     result = await ha_hub.async_pb_call(
                         self.unit, address, 1, "read_holding_registers"
                     )
+                    _LOGGER.debug("HA hub read_holding_registers result for %s: %s", address, getattr(result, "registers", result))
                     if result and hasattr(result, "registers") and result.registers:
                         return result.registers[0]
-                except Exception:
-                    pass
+                except Exception as ex:
+                    _LOGGER.debug("HA hub read_holding_registers failed for %s: %s", address, ex)
 
             # Fallback to direct pymodbus read
             if not self.host:
+                _LOGGER.debug("No host configured for pymodbus fallback (address %s)", address)
                 return None
+            _LOGGER.debug("Using pymodbus fallback to read address %s on %s:%s", address, self.host, self.port)
             return await self.hass.async_add_executor_job(_pymodbus_read_best_effort, self.host, self.port, self.unit, int(address))
         except Exception:
             _LOGGER.exception("Error reading register %s", address)
@@ -142,6 +171,7 @@ class HaAtreaModbusHub:
                 result = await ha_hub.async_pb_call(
                     self.unit, address, int(value), "write_register"
                 )
+                _LOGGER.debug("HA hub write_register result for %s: %s", address, result)
                 if result:
                     # Update cache immediately for optimistic updates
                     self._cache[int(address)] = int(value)
