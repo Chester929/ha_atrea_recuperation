@@ -1,3 +1,8 @@
+## v1.0.4 — 2026-01-08
+
+- No user-facing changes (internal or none).
+
+
 ## v1.0.3 — 2026-01-08
 
 - Fix bump ver (bca01a3) — Miroslav Mudrik
