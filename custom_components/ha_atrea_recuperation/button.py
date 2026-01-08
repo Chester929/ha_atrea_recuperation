@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
 
+
 class HaAtreaButton(ButtonEntity):
     """Button that pulses a coil."""
 

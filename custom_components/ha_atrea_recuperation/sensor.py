@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Optional
 from homeassistant.components.sensor import SensorEntity
 
+
 class HaAtreaSensor(SensorEntity):
     """Sensor reading a single register (or combined pair) from the hub cache."""
 

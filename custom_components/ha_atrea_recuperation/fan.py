@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.fan import FanEntity, SUPPORT_SET_SPEED
 
+
 class HaAtreaFan(FanEntity):
     """Percentage fan mapped to holding register 1004."""
 

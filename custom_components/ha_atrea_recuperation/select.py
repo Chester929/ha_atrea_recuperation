@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
 
+
 class OperationModeSelect(SelectEntity):
     """Select entity to set the device operation mode (0..8)."""
 

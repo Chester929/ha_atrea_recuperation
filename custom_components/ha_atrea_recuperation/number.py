@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 from homeassistant.components.number import NumberEntity
 
+
 class HaAtreaNumber(NumberEntity):
     """Number entity mapping to a holding register."""
 

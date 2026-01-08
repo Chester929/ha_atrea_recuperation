@@ -17,6 +17,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.components.climate.const import SUPPORT_TARGET_TEMPERATURE
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 
+
 class HaAtreaClimate(ClimateEntity):
     """Climate entity backed by HaAtreaModbusHub."""
 
