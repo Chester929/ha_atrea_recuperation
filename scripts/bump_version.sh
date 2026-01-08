@@ -90,7 +90,12 @@ else
   RANGE="HEAD"
 fi
 
-mapfile -t LOG_LINES < <(git log --pretty=format:'%h%x09%an%x09%s%x09%b' --no-merges $RANGE || true)
+# Portable replacement for 'mapfile -t' (not available in older bash on macOS)
+# Read git log output line-by-line into the LOG_LINES array.
+LOG_LINES=()
+while IFS= read -r line; do
+  LOG_LINES+=("$line")
+done < <(git log --pretty=format:'%h%x09%an%x09%s%x09%b' --no-merges $RANGE || true)
 
 COMMIT_LIST=""
 if [ ${#LOG_LINES[@]} -eq 0 ]; then

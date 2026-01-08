@@ -1,3 +1,14 @@
+## v1.0.2 — 2026-01-08
+
+- Change rules (463f911) — Miroslav Mudrik
+- Change GITHUB_TOKEN to PERSONAL_ACCESS_TOKEN (1607722) — Miroslav Mudrik
+- Update readme (c4efdb4) — Miroslav Mudrik
+- CLIs (de2c698) — Miroslav Mudrik
+- Add versioning (f3b7683) — Miroslav Mudrik
+- update readme (3279a2d) — Miroslav Mudrik
+
+
+
 # Changelog
 
 All notable changes to this project are documented here.
