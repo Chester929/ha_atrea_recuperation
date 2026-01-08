@@ -53,13 +53,23 @@ class HaAtreaModbusHub:
         # cache for registers
         self._cache: Dict[int, Any] = {}
 
-        # try to find HA modbus hub if provided
+        # HA modbus hub will be retrieved lazily when needed
         self._ha_modbus_hub = None
-        if self.modbus_hub_name:
+
+    def _get_ha_modbus_hub(self):
+        """Get the HA Modbus hub from hass.data if available."""
+        if self._ha_modbus_hub is None and self.modbus_hub_name:
             try:
-                self._ha_modbus_hub = self.hass.data.get("modbus", {}).get(self.modbus_hub_name)
-            except Exception:
-                self._ha_modbus_hub = None
+                # Access the modbus hubs from hass.data using the HassKey pattern
+                # The actual key used by HA modbus is a HassKey object but accessed as "modbus"
+                modbus_hubs = self.hass.data.get("modbus")
+                if isinstance(modbus_hubs, dict):
+                    self._ha_modbus_hub = modbus_hubs.get(self.modbus_hub_name)
+                    if self._ha_modbus_hub:
+                        _LOGGER.debug("Found HA Modbus hub: %s", self.modbus_hub_name)
+            except Exception as ex:
+                _LOGGER.debug("Could not get HA Modbus hub: %s", ex)
+        return self._ha_modbus_hub
 
     async def async_update(self) -> Dict[int, Any]:
         """Poll a set of registers and update cache.
@@ -93,33 +103,27 @@ class HaAtreaModbusHub:
         """Read a single register using the HA Modbus hub if available, else pymodbus fallback."""
         try:
             # Prefer HA Modbus hub
-            if self._ha_modbus_hub:
-                # try read_input_registers
-                if hasattr(self._ha_modbus_hub, "read_input_registers"):
-                    try:
-                        result = await self.hass.async_add_executor_job(
-                            self._ha_modbus_hub.read_input_registers, address, 1, self.unit
-                        )
-                        if result is not None:
-                            if hasattr(result, "registers"):
-                                return result.registers[0]
-                            if isinstance(result, (list, tuple)):
-                                return result[0]
-                    except Exception:
-                        pass
-                # try read_holding_registers
-                if hasattr(self._ha_modbus_hub, "read_holding_registers"):
-                    try:
-                        result = await self.hass.async_add_executor_job(
-                            self._ha_modbus_hub.read_holding_registers, address, 1, self.unit
-                        )
-                        if result is not None:
-                            if hasattr(result, "registers"):
-                                return result.registers[0]
-                            if isinstance(result, (list, tuple)):
-                                return result[0]
-                    except Exception:
-                        pass
+            ha_hub = self._get_ha_modbus_hub()
+            if ha_hub and hasattr(ha_hub, "async_pb_call"):
+                # Try reading as input register first
+                try:
+                    result = await ha_hub.async_pb_call(
+                        self.unit, address, 1, "read_input_registers"
+                    )
+                    if result and hasattr(result, "registers") and result.registers:
+                        return result.registers[0]
+                except Exception:
+                    pass
+                
+                # Try reading as holding register
+                try:
+                    result = await ha_hub.async_pb_call(
+                        self.unit, address, 1, "read_holding_registers"
+                    )
+                    if result and hasattr(result, "registers") and result.registers:
+                        return result.registers[0]
+                except Exception:
+                    pass
 
             # Fallback to direct pymodbus read
             if not self.host:
@@ -133,12 +137,16 @@ class HaAtreaModbusHub:
         """Write a single holding register via HA modbus hub if available, or pymodbus fallback."""
         try:
             # Try HA Modbus hub first
-            if self._ha_modbus_hub and hasattr(self._ha_modbus_hub, "write_register"):
-                ok = await self.hass.async_add_executor_job(self._ha_modbus_hub.write_register, address, int(value), self.unit)
-                if ok:
+            ha_hub = self._get_ha_modbus_hub()
+            if ha_hub and hasattr(ha_hub, "async_pb_call"):
+                result = await ha_hub.async_pb_call(
+                    self.unit, address, int(value), "write_register"
+                )
+                if result:
                     # Update cache immediately for optimistic updates
                     self._cache[int(address)] = int(value)
                     return True
+            
             # Fallback to pymodbus
             if not self.host:
                 _LOGGER.error("No host configured for pymodbus fallback")
@@ -155,11 +163,16 @@ class HaAtreaModbusHub:
     async def write_coil_pulse(self, coil_addr: int, pulse_ms: int = 500) -> None:
         """Pulse a coil (True -> wait -> False) using HA modbus hub or pymodbus fallback."""
         try:
-            if self._ha_modbus_hub and hasattr(self._ha_modbus_hub, "write_coil"):
-                await self.hass.async_add_executor_job(self._ha_modbus_hub.write_coil, coil_addr, True, self.unit)
+            ha_hub = self._get_ha_modbus_hub()
+            if ha_hub and hasattr(ha_hub, "async_pb_call"):
+                # Write True
+                await ha_hub.async_pb_call(self.unit, coil_addr, True, "write_coil")
+                # Wait
                 await self.hass.async_add_executor_job(self._sleep_ms, pulse_ms)
-                await self.hass.async_add_executor_job(self._ha_modbus_hub.write_coil, coil_addr, False, self.unit)
+                # Write False
+                await ha_hub.async_pb_call(self.unit, coil_addr, False, "write_coil")
                 return
+            
             if not self.host:
                 _LOGGER.error("No host configured for pymodbus fallback")
                 return
