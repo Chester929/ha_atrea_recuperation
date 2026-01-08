@@ -114,7 +114,7 @@ class HaAtreaModbusHub:
                         return result.registers[0]
                 except Exception:
                     pass
-                
+
                 # Try reading as holding register
                 try:
                     result = await ha_hub.async_pb_call(
@@ -146,7 +146,7 @@ class HaAtreaModbusHub:
                     # Update cache immediately for optimistic updates
                     self._cache[int(address)] = int(value)
                     return True
-            
+
             # Fallback to pymodbus
             if not self.host:
                 _LOGGER.error("No host configured for pymodbus fallback")
@@ -172,7 +172,7 @@ class HaAtreaModbusHub:
                 # Write False
                 await ha_hub.async_pb_call(self.unit, coil_addr, False, "write_coil")
                 return
-            
+
             if not self.host:
                 _LOGGER.error("No host configured for pymodbus fallback")
                 return
