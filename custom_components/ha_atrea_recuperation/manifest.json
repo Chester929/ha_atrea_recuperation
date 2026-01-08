@@ -1,7 +1,7 @@
 {
   "domain": "ha_atrea_recuperation",
   "name": "HA Atrea Recuperation",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "documentation": "https://example.local/docs/ha_atrea_recuperation",
   "requirements": [
     "pymodbus>=2.5.0"

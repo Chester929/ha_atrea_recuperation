@@ -1,3 +1,10 @@
+## v1.0.5 — 2026-01-08
+
+- rm unnecessary files for now (8bdb53d) — Miroslav Mudrik
+- Make lint happy (0a842a8) — Miroslav Mudrik
+
+
+
 ## v1.0.4 — 2026-01-08
 
 - No user-facing changes (internal or none).
