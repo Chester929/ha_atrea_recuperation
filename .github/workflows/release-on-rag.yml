@@ -1,0 +1,38 @@
+name: Create GitHub Release on tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # trigger on semver tags like v1.2.3
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get tag
+        id: tag
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Read changelog excerpt (optional)
+        id: changelog
+        run: |
+          # try to include docs/changelog.md content (or fallback)
+          if [ -f docs/changelog.md ]; then
+            body=$(sed -n '1,200p' docs/changelog.md | sed 's/"/\\"/g')
+            printf "::set-output name=body::%s" "$body"
+          else
+            printf "::set-output name=body::%s" "Release ${{ github.ref_name }}"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.RELEASE_TAG }}
+          name: ${{ steps.tag.outputs.RELEASE_TAG }}
+          body: |
+            $(if [ -f docs/changelog.md ]; then sed -n '1,200p' docs/changelog.md ; else echo "Release ${{ steps.tag.outputs.RELEASE_TAG }}" ; fi)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
