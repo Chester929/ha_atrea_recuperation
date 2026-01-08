@@ -7,4 +7,3 @@
 # (was) from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 # ...existing code...
-
