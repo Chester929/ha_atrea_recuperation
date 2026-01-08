@@ -7,6 +7,6 @@
   "zip_release": false,
   "content_in_root": false,
   "filename": "custom_components/ha_atrea_recuperation/manifest.json",
-  "tags": ["modbus", "atrea", "climate", "fan"],
+  "tags": ["modbus", "atrea", "climate", "fan", "recuperation"],
   "authors": ["Chester929"]
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bump or set version, sync to custom_components/ha_atrea_recuperation/manifest.json,
-# generate/update docs/changelog.md from git commits since last tag, commit and optionally push & tag.
-# Changelog entries include PR numbers (if found in commit messages) and authors.
+# generate/update docs/changelog.md from git commits since last tag, run pre-release checks,
+# commit, create tag and optionally push.
 #
 # Usage:
 #   ./scripts/bump_version.sh patch
@@ -10,11 +10,7 @@
 #   ./scripts/bump_version.sh 1.2.3
 # Options:
 #   --no-push    : do not push commits/tags (local only)
-#
-# Requirements (optional):
-#   - gh CLI (optional): If available and authenticated, the script will attempt to resolve
-#     PR numbers to GitHub PR authors (login). If gh is not available or lookup fails,
-#     the commit author name is used instead.
+#   --strict     : treat missing optional tools (flake8/black/pytest/mkdocs) as failures
 #
 set -euo pipefail
 
@@ -22,6 +18,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION_FILE="$REPO_ROOT/VERSION"
 MANIFEST="$REPO_ROOT/custom_components/ha_atrea_recuperation/manifest.json"
 CHANGELOG="$REPO_ROOT/docs/changelog.md"
+PRECHECK_SCRIPT="$REPO_ROOT/scripts/pre_release_checks.sh"
 
 if [ ! -f "$MANIFEST" ]; then
   echo "Error: manifest.json not found at $MANIFEST"
@@ -29,17 +26,21 @@ if [ ! -f "$MANIFEST" ]; then
 fi
 
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <major|minor|patch|X.Y.Z> [--no-push]"
+  echo "Usage: $0 <major|minor|patch|X.Y.Z> [--no-push] [--strict]"
   exit 1
 fi
 
 CMD="$1"
 shift || true
+
 PUSH="yes"
-for arg in "$@"; do
-  if [ "$arg" = "--no-push" ]; then
-    PUSH="no"
-  fi
+STRICT_FLAG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-push) PUSH="no"; shift ;;
+    --strict) STRICT_FLAG="--strict"; shift ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
 done
 
 # read current version
@@ -78,7 +79,7 @@ fi
 
 echo "Version: $CUR_VER -> $NEW_VER"
 
-# determine git range (since last tag)
+# generate changelog excerpt from git
 set +e
 LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
 set -e
@@ -89,24 +90,6 @@ else
   RANGE="HEAD"
 fi
 
-# prepare helper to resolve remote owner/repo (for gh API)
-OWNER_REPO=""
-if git remote get-url origin >/dev/null 2>&1; then
-  ORIG_URL="$(git remote get-url origin)"
-  # parse common git URL forms:
-  # git@github.com:owner/repo.git
-  # https://github.com/owner/repo.git
-  if echo "$ORIG_URL" | grep -qE 'github.com[:/].+/.+'; then
-    OWNER_REPO="$(echo "$ORIG_URL" | sed -E 's#(git@|https://)([^:]+)[:/]+([^/]+)/([^/]+)(\.git)?#\3/\4#' )"
-  fi
-fi
-
-GH_AVAILABLE="no"
-if command -v gh >/dev/null 2>&1; then
-  GH_AVAILABLE="yes"
-fi
-
-# build changelog entries: try to extract PR number and author login (via gh) or fallback to commit author
 mapfile -t LOG_LINES < <(git log --pretty=format:'%h%x09%an%x09%s%x09%b' --no-merges $RANGE || true)
 
 COMMIT_LIST=""
@@ -114,9 +97,7 @@ if [ ${#LOG_LINES[@]} -eq 0 ]; then
   COMMIT_LIST="- No user-facing changes (internal or none)."
 else
   for line in "${LOG_LINES[@]}"; do
-    # fields: hash \t author \t subject \t body
     IFS=$'\t' read -r c_hash c_author c_subject c_body <<< "$line"
-    # attempt to find PR number in subject or body: patterns like "(#123)", "#123", "PR #123", "pull request #123", "Merge pull request #123"
     prnum=""
     if echo "$c_subject" | grep -qE '\(#([0-9]+)\)'; then
       prnum="$(echo "$c_subject" | sed -nE 's/.*\(#([0-9]+)\).*/\1/p')"
@@ -128,41 +109,23 @@ else
 
     pr_display=""
     author_display="$c_author"
-
-    if [ -n "$prnum" ] && [ "$GH_AVAILABLE" = "yes" ] && [ -n "$OWNER_REPO" ]; then
-      # try to get PR author login via gh api
-      if pr_author="$(gh api "repos/$OWNER_REPO/pulls/$prnum" -q '.user.login' 2>/dev/null || true)"; then
-        if [ -n "$pr_author" ]; then
-          author_display="$pr_author"
-        fi
-      fi
-    fi
-
     if [ -n "$prnum" ]; then
       pr_display=" (#${prnum})"
     else
-      # include short hash if no PR number
       pr_display=" (${c_hash})"
     fi
 
-    # sanitize subject (single line)
     subj_single="$(echo "$c_subject" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-
     COMMIT_LIST="${COMMIT_LIST}- ${subj_single}${pr_display} — ${author_display}\n"
   done
 fi
 
-# Build changelog section
 DATE="$(date -u +%Y-%m-%d)"
 NEW_HEADER="## v${NEW_VER} — ${DATE}"
-
-# create new section text
 NEW_SECTION="${NEW_HEADER}\n\n${COMMIT_LIST}\n"
 
-# ensure docs directory exists
 mkdir -p "$(dirname "$CHANGELOG")"
 
-# prepend to changelog file (avoid duplicates)
 if [ -f "$CHANGELOG" ]; then
   if grep -qF "$NEW_HEADER" "$CHANGELOG"; then
     echo "Changelog already contains header '$NEW_HEADER' — skipping prepend."
@@ -202,9 +165,23 @@ with open(mf, "w", encoding="utf-8") as f:
 print("Updated", mf)
 PY
 
-# git add/commit
+# Stage files for pre-release checks
 git add "$VERSION_FILE" "$MANIFEST" "$CHANGELOG" || true
 
+# Run pre-release checks
+if [ ! -x "$PRECHECK_SCRIPT" ]; then
+  echo "Pre-check script not found or not executable at $PRECHECK_SCRIPT"
+  exit 1
+fi
+
+echo "Running pre-release checks..."
+if ! "$PRECHECK_SCRIPT" "$NEW_VER" $STRICT_FLAG; then
+  echo "Pre-release checks failed. Fix issues and retry. (Files are staged.)"
+  exit 1
+fi
+echo "Pre-release checks passed."
+
+# git commit
 COMMIT_MESSAGE="Bump version to v${NEW_VER} and update changelog"
 if git diff --cached --quiet; then
   echo "No staged changes to commit."

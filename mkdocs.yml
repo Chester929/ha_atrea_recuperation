@@ -1,0 +1,17 @@
+site_name: HA Atrea Recuperation
+site_description: Documentation for the HA Atrea Recuperation Home Assistant integration
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Entities: entities.md
+  - Troubleshooting: troubleshooting.md
+  - Developer: developer.md
+  - Changelog: changelog.md
+theme:
+  name: material
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences
