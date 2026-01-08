@@ -171,7 +171,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
     hass.data[DOMAIN]["coordinator"] = coordinator
 
     # Use an EntityComponent to add entities (compatible with HA core patterns)
-    component = EntityComponent(_LOGGER, DOMAIN, hass)
+    component = EntityComponent(hass, _LOGGER, DOMAIN)
     await component.async_add_entities(entities)
 
     _LOGGER.info("HA Atrea Recuperation integration initialized")
