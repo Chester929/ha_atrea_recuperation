@@ -13,10 +13,10 @@ set `modbus_hub` to the name of that hub. It exposes:
 from __future__ import annotations
 
 import logging
-from typing import Any
+from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .hub import HaAtreaModbusHub
 from .climate import HaAtreaClimate
@@ -114,20 +114,33 @@ async def async_setup(hass: HomeAssistant, config: dict):
         hvac_map=hvac_map,
     )
 
+    # Create DataUpdateCoordinator
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_{name}",
+        update_method=hub.async_update,
+        update_interval=timedelta(seconds=poll),
+    )
+
+    # Perform initial refresh suitable for YAML-based integration
+    await coordinator.async_refresh()
+
     entities = []
 
     # Climate
-    entities.append(HaAtreaClimate(hub, name))
+    entities.append(HaAtreaClimate(coordinator, hub, name))
 
     # Operation mode select (writes to holding 1001)
-    entities.append(OperationModeSelect(hub, f"{name} Operation Mode"))
+    entities.append(OperationModeSelect(coordinator, hub, f"{name} Operation Mode"))
 
     # Fan entity controlling holding 1004 (percentage)
-    entities.append(HaAtreaFan(hub, f"{name} Fan"))
+    entities.append(HaAtreaFan(coordinator, hub, f"{name} Fan"))
 
     # Number - target temperature (holding 1002)
     entities.append(
         HaAtreaNumber(
+            coordinator,
             hub,
             f"{name} Target Temperature",
             1002,
@@ -141,25 +154,23 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
     # Sensors from INPUT_REGISTERS
     for reg, meta in INPUT_REGISTERS.items():
-        entities.append(HaAtreaSensor(hub, f"{name} {meta['name']}", reg, scale=meta.get("scale", 1.0), unit=meta.get("unit")))
+        entities.append(HaAtreaSensor(coordinator, hub, f"{name} {meta['name']}", reg, scale=meta.get("scale", 1.0), unit=meta.get("unit")))
 
     # Sensors from HOLDING_REGISTERS (expose read-only)
     for reg, meta in HOLDING_REGISTERS.items():
-        entities.append(HaAtreaSensor(hub, f"{name} {meta['name']}", reg, scale=meta.get("scale", 1.0), unit=meta.get("unit"), holding=True))
+        entities.append(HaAtreaSensor(coordinator, hub, f"{name} {meta['name']}", reg, scale=meta.get("scale", 1.0), unit=meta.get("unit"), holding=True))
 
     # Buttons for coils
     for coil_addr, coil_name in COILS.items():
-        entities.append(HaAtreaButton(hub, f"{name} {coil_name}", coil_addr))
+        entities.append(HaAtreaButton(coordinator, hub, f"{name} {coil_name}", coil_addr))
 
-    # register hub and add entities
+    # register hub and coordinator in hass.data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN]["hub"] = hub
+    hass.data[DOMAIN]["coordinator"] = coordinator
 
     async_add_entities = hass.helpers.entity_platform.async_add_entities
-    async_add_entities(entities, update_before_add=True)
-
-    # start polling
-    await hub.async_start()
+    async_add_entities(entities)
 
     _LOGGER.info("HA Atrea Recuperation integration initialized")
     return True

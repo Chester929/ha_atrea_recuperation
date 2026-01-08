@@ -2,48 +2,48 @@
 
 from __future__ import annotations
 
-from homeassistant.components.fan import FanEntity, SUPPORT_SET_SPEED
+from homeassistant.components.fan import FanEntity, FanEntityFeature
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
-class HaAtreaFan(FanEntity):
+class HaAtreaFan(CoordinatorEntity, FanEntity):
     """Percentage fan mapped to holding register 1004."""
 
-    def __init__(self, hub, name: str) -> None:
+    def __init__(self, coordinator, hub, name: str) -> None:
+        super().__init__(coordinator)
         self._hub = hub
         self._name = name
-        self._unique_id = f"ha_atrea_fan_{name.replace(' ', '_').lower()}"
-        self._hub.subscribe(self._async_write_ha_state)
+        self._attr_unique_id = f"ha_atrea_fan_{name.replace(' ', '_').lower()}"
 
     @property
     def name(self) -> str:
         return self._name
 
     @property
-    def unique_id(self) -> str:
-        return self._unique_id
-
-    @property
     def is_on(self) -> bool:
-        val = self._hub.get_cached(1004)
+        if self.coordinator.data is None:
+            return False
+        val = self.coordinator.data.get(1004)
         if val is None:
             return False
         return int(val) > 0
 
     @property
     def percentage(self) -> int | None:
-        val = self._hub.get_cached(1004)
+        if self.coordinator.data is None:
+            return None
+        val = self.coordinator.data.get(1004)
         if val is None:
             return None
         return int(val)
 
     @property
     def supported_features(self) -> int:
-        return SUPPORT_SET_SPEED
+        return FanEntityFeature.SET_SPEED
 
     async def async_set_percentage(self, percentage: int) -> None:
         await self._hub.write_holding(1004, int(percentage))
-        self._hub._cache[1004] = int(percentage)
-        self.async_write_ha_state()
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_on(self, percentage: int | None = None, **kwargs) -> None:
         if percentage is None:

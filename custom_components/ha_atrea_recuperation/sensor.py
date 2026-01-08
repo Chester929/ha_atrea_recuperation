@@ -1,46 +1,52 @@
 """Generic sensor entity for HA Atrea Recuperation reading cached registers.
 
-Sensors read values from hub cache. Some sensors combine register pairs (32-bit)
+Sensors read values from coordinator data. Some sensors combine register pairs (32-bit)
 or build a serial string from character registers.
 """
 
 from __future__ import annotations
 
-from typing import Optional
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
-class HaAtreaSensor(SensorEntity):
-    """Sensor reading a single register (or combined pair) from the hub cache."""
+class HaAtreaSensor(CoordinatorEntity, SensorEntity):
+    """Sensor reading a single register (or combined pair) from the coordinator data."""
 
-    def __init__(self, hub, name: str, register: int, scale: float = 1.0, unit: str | None = None, holding: bool = False) -> None:
-        self._hub = hub
+    def __init__(
+        self,
+        coordinator,
+        hub,
+        name: str,
+        register: int,
+        scale: float = 1.0,
+        unit: str | None = None,
+        holding: bool = False
+    ) -> None:
+        super().__init__(coordinator)
         self._name = name
         self._register = int(register)
         self._scale = float(scale)
         self._unit = unit
         self._holding = holding
-        self._unique_id = f"ha_atrea_sensor_{self._register}_{name.replace(' ', '_').lower()}"
-        self._hub.subscribe(self._async_write_ha_state)
+        self._attr_unique_id = f"ha_atrea_sensor_{self._register}_{name.replace(' ', '_').lower()}"
 
     @property
     def name(self) -> str:
         return self._name
 
     @property
-    def unique_id(self) -> str:
-        return self._unique_id
-
-    @property
     def native_unit_of_measurement(self) -> str | None:
         return self._unit
 
     @property
-    def native_value(self) -> Optional[float]:
+    def native_value(self) -> float | str | None:
+        if self.coordinator.data is None:
+            return None
         # 32-bit counters (combine low + high)
         if self._register in (3200, 3202, 3204):
-            low = self._hub.get_cached(self._register)
-            high = self._hub.get_cached(self._register + 1)
+            low = self.coordinator.data.get(self._register)
+            high = self.coordinator.data.get(self._register + 1)
             if low is None:
                 return None
             if high is None:
@@ -51,7 +57,7 @@ class HaAtreaSensor(SensorEntity):
         if self._register == 3000:
             chars = []
             for r in range(3000, 3009):
-                v = self._hub.get_cached(r)
+                v = self.coordinator.data.get(r)
                 if v is None:
                     continue
                 try:
@@ -62,7 +68,7 @@ class HaAtreaSensor(SensorEntity):
                 return None
             return "".join(chars)
         # Regular single-register sensor
-        v = self._hub.get_cached(self._register)
+        v = self.coordinator.data.get(self._register)
         if v is None:
             return None
         try:

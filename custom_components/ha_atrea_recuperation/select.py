@@ -3,28 +3,27 @@
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
-class OperationModeSelect(SelectEntity):
+class OperationModeSelect(CoordinatorEntity, SelectEntity):
     """Select entity to set the device operation mode (0..8)."""
 
-    def __init__(self, hub, name: str) -> None:
+    def __init__(self, coordinator, hub, name: str) -> None:
+        super().__init__(coordinator)
         self._hub = hub
         self._name = name
-        self._unique_id = f"ha_atrea_opmode_{name.replace(' ', '_').lower()}"
-        self._hub.subscribe(self._async_write_ha_state)
+        self._attr_unique_id = f"ha_atrea_opmode_{name.replace(' ', '_').lower()}"
 
     @property
     def name(self) -> str:
         return self._name
 
     @property
-    def unique_id(self) -> str:
-        return self._unique_id
-
-    @property
     def current_option(self) -> str | None:
-        val = self._hub.get_cached(1001)
+        if self.coordinator.data is None:
+            return None
+        val = self.coordinator.data.get(1001)
         if val is None:
             return None
         try:
@@ -46,5 +45,4 @@ class OperationModeSelect(SelectEntity):
         except ValueError:
             return
         await self._hub.write_holding(1001, int(idx))
-        self._hub._cache[1001] = int(idx)
-        self.async_write_ha_state()
+        await self.coordinator.async_request_refresh()
