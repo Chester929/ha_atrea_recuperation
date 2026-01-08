@@ -1,12 +1,11 @@
 """Generic sensor entity for HA Atrea Recuperation reading cached registers.
 
-Sensors read values from hub cache. Some sensors combine register pairs (32-bit)
+Sensors read values from coordinator data. Some sensors combine register pairs (32-bit)
 or build a serial string from character registers.
 """
 
 from __future__ import annotations
 
-from typing import Optional
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -41,7 +40,7 @@ class HaAtreaSensor(CoordinatorEntity, SensorEntity):
         return self._unit
 
     @property
-    def native_value(self) -> Optional[float]:
+    def native_value(self) -> float | str | None:
         if self.coordinator.data is None:
             return None
         # 32-bit counters (combine low + high)

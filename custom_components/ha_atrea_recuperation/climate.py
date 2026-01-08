@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,7 +29,7 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         return self.hass.config.units.temperature_unit
 
     @property
-    def current_temperature(self) -> Optional[float]:
+    def current_temperature(self) -> float | None:
         if self.coordinator.data is None:
             return None
         val = self.coordinator.data.get(1104)
@@ -40,7 +38,7 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         return float(val) / 10.0
 
     @property
-    def target_temperature(self) -> Optional[float]:
+    def target_temperature(self) -> float | None:
         if self.coordinator.data is None:
             return None
         val = self.coordinator.data.get(1002)
@@ -49,11 +47,11 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         return float(val) / 10.0
 
     @property
-    def hvac_modes(self):
+    def hvac_modes(self) -> list[str]:
         return [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT]
 
     @property
-    def hvac_mode(self):
+    def hvac_mode(self) -> str:
         if self.coordinator.data is None:
             return HVACMode.OFF
         dev_mode_val = self.coordinator.data.get(1001)
@@ -69,13 +67,13 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         return HVACMode.AUTO
 
     @property
-    def supported_features(self) -> ClimateEntityFeature:
+    def supported_features(self) -> int:
         return ClimateEntityFeature.TARGET_TEMPERATURE
 
     async def async_set_temperature(self, **kwargs):
         if ATTR_TEMPERATURE in kwargs:
             temp = kwargs[ATTR_TEMPERATURE]
-    def supported_features(self) -> int:
+            await self._hub.write_holding(1002, int(round(float(temp) * 10.0)))
             await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: str):
