@@ -124,6 +124,36 @@ ha_atrea_recuperation:
     poll_interval: 10
 ```
 
+#### Multiple devices with separate Modbus hubs:
+
+```yaml
+# Configure multiple Modbus hubs in Home Assistant
+modbus:
+  - name: modbus_atrea_building_a
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+  - name: modbus_atrea_building_b
+    type: tcp
+    host: 192.168.1.51
+    port: 502
+    timeout: 5
+
+# Each device uses its own Modbus hub
+ha_atrea_recuperation:
+  - name: "Atrea Building A"
+    modbus_hub: modbus_atrea_building_a
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Building B"
+    modbus_hub: modbus_atrea_building_b
+    unit: 1
+    poll_interval: 10
+```
+
 #### Multiple devices with separate TCP connections:
 
 ```yaml
