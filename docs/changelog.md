@@ -1,17 +1,21 @@
-## v1.0.12 — TBD
+## v1.1.0 — 2026-01-09
 
-**Enhancement: Device visibility in integrations UI**
+**Enhancement: UI Configuration Flow (PR #12)**
 
-Added `integration_type: "device"` to manifest.json to make configured devices visible in Home Assistant's integrations UI.
+Added support for configuring devices through Home Assistant's UI instead of YAML, making setup easier and more user-friendly.
 
 **Changes:**
-- Added `integration_type: "device"` field to manifest.json
+- Added complete config flow implementation with step-by-step UI setup
+- Added `integration_type: "device"` and `config_flow: true` to manifest.json
 - Devices now appear at `/config/integrations/integration/ha_atrea_recuperation`
+- Support for both UI configuration (new) and YAML configuration (legacy, still supported)
+- Options flow for updating poll interval after setup
 
 **User impact:**
-- Users can now view all configured Atrea devices in the integrations UI
-- Each device shows its entities, information, and diagnostics in the UI
-- No configuration changes required — existing configurations will work after upgrade
+- New users can add devices via UI: Configuration → Integrations → Add Integration → "HA Atrea Recuperation"
+- Existing YAML configurations continue to work without changes
+- Devices are visible in the integrations UI with entities, information, and diagnostics
+- Poll interval can be changed in UI without editing configuration files
 
 ## v1.0.8 — 2026-01-08
 
