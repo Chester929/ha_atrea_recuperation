@@ -81,8 +81,8 @@ async def async_setup(hass: HomeAssistant, config: dict):
         await coordinator.async_refresh()
 
         # Store hub and coordinator in hass.data for platforms to access
-        # Use device name as key to support multiple devices
-        device_key = name.lower().replace(" ", "_")
+        # Use device name + host/port + unit as key to support multiple devices
+        device_key = f"{name}_{host or modbus_hub}_{unit}".lower().replace(" ", "_")
         hass.data[DOMAIN]["devices"][device_key] = {
             "hub": hub,
             "coordinator": coordinator,

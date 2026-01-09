@@ -71,8 +71,13 @@ class HaAtreaModbusHub:
         # Try to get SW version from cache
         sw_version = self._get_sw_version()
 
-        # Use serial number if available, otherwise use name as identifier
-        identifier = serial if serial else self.name.lower().replace(" ", "_")
+        # Use serial number if available, otherwise use name + host/port + unit as identifier
+        if serial:
+            identifier = serial
+        else:
+            # Include host/port and unit to ensure uniqueness
+            host_part = self.host or self.modbus_hub_name or "unknown"
+            identifier = f"{self.name}_{host_part}_{self.unit}".lower().replace(" ", "_")
 
         return DeviceInfo(
             identifiers={(DOMAIN, identifier)},
@@ -89,6 +94,9 @@ class HaAtreaModbusHub:
             for r in range(3000, 3009):
                 v = self._cache.get(r)
                 if v is None:
+                    return None
+                # Validate printable ASCII range
+                if not (32 <= int(v) <= 126):
                     return None
                 try:
                     chars.append(chr(int(v)))
@@ -112,6 +120,9 @@ class HaAtreaModbusHub:
                 if v == 0:
                     # Null terminator, stop reading
                     break
+                # Validate printable ASCII range
+                if not (32 <= int(v) <= 126):
+                    break
                 try:
                     chars.append(chr(int(v)))
                 except Exception:
@@ -133,6 +144,9 @@ class HaAtreaModbusHub:
                     break
                 if v == 0:
                     # Null terminator, stop reading
+                    break
+                # Validate printable ASCII range
+                if not (32 <= int(v) <= 126):
                     break
                 try:
                     chars.append(chr(int(v)))
