@@ -79,7 +79,7 @@ ha_atrea_recuperation:
   modbus_hub: modbus_atrea
   unit: 1
   poll_interval: 10
-  
+
   # Optional: Custom operation mode labels (default: English)
   hvac_mode_labels:
     0: "Off"
@@ -91,6 +91,74 @@ ha_atrea_recuperation:
     6: "Balancing"
     7: "Overpressure"
     8: "Undefined"
+```
+
+### Multiple Devices Configuration
+
+You can configure multiple recuperation units by providing a list of device configurations. Each device will appear as a separate device in Home Assistant with all its entities grouped together.
+
+#### Multiple devices with shared Modbus hub:
+
+```yaml
+# Configure Home Assistant's Modbus integration (recommended)
+modbus:
+  - name: modbus_atrea
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+# Configure multiple HA Atrea Recuperation devices
+ha_atrea_recuperation:
+  - name: "Atrea Ground Floor"
+    modbus_hub: modbus_atrea
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea First Floor"
+    modbus_hub: modbus_atrea
+    unit: 2
+    poll_interval: 10
+```
+
+#### Multiple devices with separate TCP connections:
+
+```yaml
+ha_atrea_recuperation:
+  - name: "Atrea Building A"
+    modbus_host: 192.168.1.50
+    modbus_port: 502
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Building B"
+    modbus_host: 192.168.1.51
+    modbus_port: 502
+    unit: 1
+    poll_interval: 10
+```
+
+#### Mixed configuration (hub + direct TCP):
+
+```yaml
+modbus:
+  - name: modbus_atrea_main
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+ha_atrea_recuperation:
+  - name: "Atrea Main Building"
+    modbus_hub: modbus_atrea_main
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Remote Site"
+    modbus_host: 192.168.2.100
+    modbus_port: 502
+    unit: 1
+    poll_interval: 15
 ```
 
 ### Fallback Configuration (without HA Modbus integration)

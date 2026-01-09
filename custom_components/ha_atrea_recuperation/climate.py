@@ -17,16 +17,16 @@ DOMAIN = "ha_atrea_recuperation"
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
     """Set up the climate platform."""
     entities = []
-    
+
     # Get all devices from hass.data
     devices = hass.data[DOMAIN].get("devices", {})
-    
+
     # Create climate entity for each device
     for device_key, device_data in devices.items():
         hub = device_data["hub"]
         coordinator = device_data["coordinator"]
         name = device_data["name"]
-        
+
         entities.append(HaAtreaClimate(coordinator, hub, name))
 
     async_add_entities(entities)

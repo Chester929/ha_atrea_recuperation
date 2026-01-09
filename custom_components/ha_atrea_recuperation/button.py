@@ -17,7 +17,7 @@ async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, 
 
     # Get all devices from hass.data
     devices = hass.data[DOMAIN].get("devices", {})
-    
+
     # Create button entities for each device
     for device_key, device_data in devices.items():
         hub = device_data["hub"]

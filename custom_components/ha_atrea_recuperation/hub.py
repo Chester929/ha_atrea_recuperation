@@ -64,16 +64,22 @@ class HaAtreaModbusHub:
         """Return device info for device registry."""
         # Try to get serial number from cache for unique identifier
         serial = self._get_serial_number()
-        
+
+        # Try to get model name from cache
+        model = self._get_model_name()
+
+        # Try to get SW version from cache
+        sw_version = self._get_sw_version()
+
         # Use serial number if available, otherwise use name as identifier
         identifier = serial if serial else self.name.lower().replace(" ", "_")
-        
+
         return DeviceInfo(
             identifiers={(DOMAIN, identifier)},
             name=self.name,
             manufacturer="Atrea",
-            model="DUPLEX Recuperation",
-            sw_version=None,  # Could be added if device reports firmware version
+            model=model if model else "DUPLEX Recuperation",
+            sw_version=sw_version,
         )
 
     def _get_serial_number(self) -> str | None:
@@ -91,6 +97,50 @@ class HaAtreaModbusHub:
             if chars:
                 serial = "".join(chars).strip()
                 return serial if serial else None
+        except Exception:
+            return None
+
+    def _get_model_name(self) -> str | None:
+        """Extract model name from cached registers 3009-3019."""
+        try:
+            chars = []
+            for r in range(3009, 3020):
+                v = self._cache.get(r)
+                if v is None:
+                    # Model string might be shorter, break on first None
+                    break
+                if v == 0:
+                    # Null terminator, stop reading
+                    break
+                try:
+                    chars.append(chr(int(v)))
+                except Exception:
+                    break
+            if chars:
+                model = "".join(chars).strip()
+                return model if model else None
+        except Exception:
+            return None
+
+    def _get_sw_version(self) -> str | None:
+        """Extract SW version from cached registers 3100-3103."""
+        try:
+            chars = []
+            for r in range(3100, 3104):
+                v = self._cache.get(r)
+                if v is None:
+                    # Version string might be shorter, break on first None
+                    break
+                if v == 0:
+                    # Null terminator, stop reading
+                    break
+                try:
+                    chars.append(chr(int(v)))
+                except Exception:
+                    break
+            if chars:
+                version = "".join(chars).strip()
+                return version if version else None
         except Exception:
             return None
 
@@ -142,8 +192,9 @@ class HaAtreaModbusHub:
                 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014,
                 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1110, 1111, 1112, 1113, 1114,
                 1201, 1202, 1203, 1204, 1205, 1206,
-                3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008,
-                3100, 3101, 3102, 3103,
+                3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008,  # Serial number
+                3009, 3010, 3011, 3012, 3013, 3014, 3015, 3016, 3017, 3018, 3019,  # Model
+                3100, 3101, 3102, 3103,  # SW version
                 3200, 3201, 3202, 3203, 3204, 3205,
                 7103, 7104, 7105,
                 # holdings (we read a selected set here)
