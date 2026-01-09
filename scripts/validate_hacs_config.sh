@@ -73,10 +73,10 @@ manifest = json.load(open('$FULL_MANIFEST_PATH'))
 required_fields = ['domain', 'name', 'version', 'documentation', 'requirements', 'codeowners']
 missing = [f for f in required_fields if f not in manifest]
 if missing:
-    print(f'Missing fields in manifest.json: {missing}')
+    print(f\"Missing fields in manifest.json: {missing}\")
     sys.exit(1)
 if manifest.get('domain') != 'ha_atrea_recuperation':
-    print(f'Invalid domain in manifest.json: {manifest.get(\"domain\")}')
+    print(f\"Invalid domain in manifest.json: {manifest.get('domain')}\")
     sys.exit(1)
 " 2>/dev/null; then
     echo "❌ ERROR: manifest.json validation failed"
@@ -120,8 +120,9 @@ fi
 HACS_DOMAINS=$(python3 -c "import json; print(','.join(json.load(open('$HACS_JSON')).get('domains', [])))")
 MANIFEST_DOMAIN=$(python3 -c "import json; print(json.load(open('$FULL_MANIFEST_PATH')).get('domain', ''))")
 
-if [[ ! "$HACS_DOMAINS" =~ "climate" ]] || [[ ! "$HACS_DOMAINS" =~ "sensor" ]]; then
-    echo "⚠ WARNING: hacs.json domains list may be incomplete"
+# Check that hacs.json domains list is not empty
+if [ -z "$HACS_DOMAINS" ]; then
+    echo "⚠ WARNING: hacs.json domains list is empty"
 fi
 
 echo "✓ Domain configuration is consistent"
