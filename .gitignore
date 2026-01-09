@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 *.log
+
+# Prevent accidental addition of www directory (this is not a Lovelace card)
+www/

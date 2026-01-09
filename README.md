@@ -433,6 +433,28 @@ Include:
 - Debug logs showing the error
 - Device model/firmware version (if known)
 
+## Repository Structure
+
+This repository contains a **Home Assistant Custom Integration** (not a Lovelace card). The integration code is located in the `custom_components/ha_atrea_recuperation/` directory.
+
+### HACS Configuration
+
+The repository is configured for HACS with `content_in_root: false` in `hacs.json`. This is **required** because:
+- The integration code is in a subdirectory, not the root
+- HACS installs only the `custom_components/ha_atrea_recuperation/` directory to users' systems
+- The root directory contains development files (docs, scripts, tests) that are not part of the integration
+
+**Important**: Do NOT change `content_in_root` to `true` as this would break HACS installation.
+
+### What's NOT in This Repository
+
+This is an **integration** (backend component), not a Lovelace card (frontend plugin). Therefore:
+- There is NO `www/` directory
+- There is NO `ha_atrea_recuperation_card.js` file
+- This is installed via HACS → Integrations, not HACS → Frontend
+
+See [.hacs.md](.hacs.md) for detailed information about HACS configuration.
+
 ## Development
 
 ### Code Layout
