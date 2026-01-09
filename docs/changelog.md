@@ -1,3 +1,18 @@
+## v1.0.12 — TBD
+
+**Enhancement: Device visibility in integrations UI**
+
+Added `integration_type: "device"` to manifest.json to make configured devices visible in Home Assistant's integrations UI.
+
+**Changes:**
+- Added `integration_type: "device"` field to manifest.json
+- Devices now appear at `/config/integrations/integration/ha_atrea_recuperation`
+
+**User impact:**
+- Users can now view all configured Atrea devices in the integrations UI
+- Each device shows its entities, information, and diagnostics in the UI
+- No configuration changes required — existing configurations will work after upgrade
+
 ## v1.0.8 — 2026-01-08
 
 **Bug fix: Modbus hub access (PR #TBD)**

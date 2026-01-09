@@ -223,6 +223,11 @@ ha_atrea_recuperation:
 
 All configured recuperation units appear as devices in Home Assistant's device registry. Each device groups all its entities (climate, sensors, fan, select, number, buttons) for easy management.
 
+You can view your configured devices in the Home Assistant UI at:
+**Configuration** → **Devices & Services** → **Integrations** → **HA Atrea Recuperation**
+
+Or directly at: `http://homeassistant.local/config/integrations/integration/ha_atrea_recuperation`
+
 ### Device Information
 
 Each device displays the following information in Home Assistant:
