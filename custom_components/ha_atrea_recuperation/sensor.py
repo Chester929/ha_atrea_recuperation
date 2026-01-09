@@ -7,7 +7,9 @@ or build a serial string from character registers.
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import HOLDING_REGISTERS, INPUT_REGISTERS
@@ -15,15 +17,61 @@ from .const import HOLDING_REGISTERS, INPUT_REGISTERS
 DOMAIN = "ha_atrea_recuperation"
 
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the sensor platform from a config entry."""
+    entities = []
+    device_data = hass.data[DOMAIN]["devices"][entry.entry_id]
+    hub = device_data["hub"]
+    coordinator = device_data["coordinator"]
+    name = device_data["name"]
+
+    # Sensors from INPUT_REGISTERS
+    for reg, meta in INPUT_REGISTERS.items():
+        entities.append(
+            HaAtreaSensor(
+                coordinator,
+                hub,
+                f"{name} {meta['name']}",
+                reg,
+                scale=meta.get("scale", 1.0),
+                unit=meta.get("unit"),
+            )
+        )
+
+    # Sensors from HOLDING_REGISTERS (expose read-only)
+    for reg, meta in HOLDING_REGISTERS.items():
+        entities.append(
+            HaAtreaSensor(
+                coordinator,
+                hub,
+                f"{name} {meta['name']}",
+                reg,
+                scale=meta.get("scale", 1.0),
+                unit=meta.get("unit"),
+                holding=True,
+            )
+        )
+
+    async_add_entities(entities)
+
+
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
-    """Set up the sensor platform."""
+    """Set up the sensor platform (YAML backward compatibility)."""
     entities = []
 
     # Get all devices from hass.data
     devices = hass.data[DOMAIN].get("devices", {})
 
-    # Create entities for each device
+    # Create entities for each device (skip config entry devices)
     for device_key, device_data in devices.items():
+        # Skip if this is a config entry device (has entry_id)
+        if "entry_id" in device_data:
+            continue
+            
         hub = device_data["hub"]
         coordinator = device_data["coordinator"]
         name = device_data["name"]

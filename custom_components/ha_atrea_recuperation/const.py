@@ -1,5 +1,19 @@
 """Constants for HA Atrea Recuperation integration."""
 
+# Domain
+DOMAIN = "ha_atrea_recuperation"
+
+# Config flow constants
+CONF_MODBUS_HUB = "modbus_hub"
+CONF_UNIT = "unit"
+CONF_POLL_INTERVAL = "poll_interval"
+
+# Defaults
+DEFAULT_NAME = "HA Atrea Recuperation"
+DEFAULT_PORT = 502
+DEFAULT_UNIT = 1
+DEFAULT_POLL_INTERVAL = 10
+
 # Input registers (read-only) with scale and unit (subset shown; hub polls a larger list)
 INPUT_REGISTERS = {
     1001: {"name": "Mode (input)", "scale": 1, "unit": None},

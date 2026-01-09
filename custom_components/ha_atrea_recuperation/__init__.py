@@ -1,7 +1,10 @@
-"""HA Atrea Recuperation integration (YAML-configured).
+"""HA Atrea Recuperation integration.
 
-This integration expects you to configure the Home Assistant Modbus integration and
-set `modbus_hub` to the name of that hub. It exposes:
+This integration supports both:
+1. YAML configuration (legacy, backward compatible)
+2. UI configuration via config flow (new, recommended)
+
+Exposes:
 - climate: target temperature + simplified HVAC mapping
 - select: full device operation mode (writes to holding 1001)
 - fan: percentage control (writes to holding 1004)
@@ -15,23 +18,117 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import discovery
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .const import (
+    DOMAIN,
+    DEFAULT_NAME,
+    CONF_MODBUS_HUB,
+    CONF_UNIT,
+    CONF_POLL_INTERVAL,
+    DEFAULT_POLL_INTERVAL,
+)
 from .hub import HaAtreaModbusHub
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "ha_atrea_recuperation"
-DEFAULT_NAME = "HA Atrea Recuperation"
+PLATFORMS: list[Platform] = [
+    Platform.CLIMATE,
+    Platform.SENSOR,
+    Platform.SELECT,
+    Platform.FAN,
+    Platform.NUMBER,
+    Platform.BUTTON,
+]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up HA Atrea Recuperation from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault("devices", {})
+
+    # Extract configuration from entry
+    name = entry.data.get(CONF_NAME, DEFAULT_NAME)
+    modbus_hub = entry.data.get(CONF_MODBUS_HUB)
+    host = entry.data.get(CONF_HOST)
+    port = entry.data.get(CONF_PORT, 502)
+    unit = entry.data.get(CONF_UNIT, 1)
+    
+    # Check for poll_interval in options first, then data
+    poll_interval = entry.options.get(
+        CONF_POLL_INTERVAL,
+        entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+    )
+
+    # Create hub
+    hub = HaAtreaModbusHub(
+        hass,
+        name,
+        host=host,
+        port=port,
+        unit=unit,
+        modbus_hub_name=modbus_hub,
+        poll_interval=poll_interval,
+        hvac_map=None,  # Use default
+    )
+
+    # Create DataUpdateCoordinator
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_{name}",
+        update_method=hub.async_update,
+        update_interval=timedelta(seconds=poll_interval),
+    )
+
+    # Perform initial refresh
+    await coordinator.async_config_entry_first_refresh()
+
+    # Store hub and coordinator
+    device_key = entry.entry_id
+    hass.data[DOMAIN]["devices"][device_key] = {
+        "hub": hub,
+        "coordinator": coordinator,
+        "name": name,
+        "config": entry.data,
+        "entry_id": entry.entry_id,
+    }
+
+    # Set up platforms
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Listen for options updates
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
+
+    _LOGGER.info("HA Atrea Recuperation device '%s' initialized from config entry", name)
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    # Unload platforms
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        # Remove device data
+        device_key = entry.entry_id
+        hass.data[DOMAIN]["devices"].pop(device_key, None)
+        _LOGGER.info("HA Atrea Recuperation device unloaded")
+
+    return unload_ok
+
+
+async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Update options."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """YAML setup entrypoint for the custom component."""
+    """YAML setup entrypoint for the custom component (backward compatibility)."""
     conf = config.get(DOMAIN)
     if conf is None:
-        _LOGGER.error("No configuration found for %s", DOMAIN)
         return True
 
     # Initialize hass.data storage for this domain
@@ -90,7 +187,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
             "config": device_conf,
         }
 
-        _LOGGER.info("HA Atrea Recuperation device '%s' initialized", name)
+        _LOGGER.info("HA Atrea Recuperation device '%s' initialized from YAML", name)
 
     # Load platforms using discovery helper (once for all devices)
     for platform in ("climate", "sensor", "select", "fan", "number", "button"):
