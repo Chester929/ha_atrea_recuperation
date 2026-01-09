@@ -42,11 +42,15 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         # Include device name in unique_id to avoid conflicts with multiple devices
         device_id = hub.name.lower().replace(" ", "_")
         self._attr_unique_id = f"ha_atrea_{device_id}_climate"
-        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def device_info(self):
+        """Return device info to link this entity to the device."""
+        return self._hub.device_info
 
     @property
     def temperature_unit(self) -> str:
