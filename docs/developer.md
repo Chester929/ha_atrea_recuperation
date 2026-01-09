@@ -34,7 +34,7 @@ Since version 1.0.6, the integration uses Home Assistant's platform-based archit
 .
 ├─ hacs.json              # HACS metadata
 ├─ mkdocs.yml             # Documentation configuration
-├─ VERSION                # Current version (1.0.6)
+├─ VERSION                # Current version (1.1.0)
 ├─ requirements.txt       # Python dependencies
 ├─ scripts/               # Helper scripts
 │  ├─ bump_version.sh    # Version bumping utility
@@ -246,12 +246,12 @@ Follow Home Assistant integration best practices:
 
 ## Release Process & HACS
 
-1. Update `VERSION` file with new semantic version (e.g., `1.0.7`)
+1. Update `VERSION` file with new semantic version (e.g., `1.1.1`)
 2. Update `custom_components/ha_atrea_recuperation/manifest.json` version
 3. Add release notes to `docs/changelog.md`
 4. Run `bash scripts/bump_version.sh` to sync versions
-5. Commit changes: `git commit -m "Bump version to 1.0.7"`
-6. Tag release: `git tag v1.0.7`
+5. Commit changes: `git commit -m "Bump version to 1.1.1"`
+6. Tag release: `git tag v1.1.1`
 7. Push with tags: `git push && git push --tags`
 8. Create GitHub release from tag with changelog
 

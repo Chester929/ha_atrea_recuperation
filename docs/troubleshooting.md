@@ -347,7 +347,7 @@ When opening a GitHub issue, please provide:
 2. **Integration Version**:
    ```yaml
    # From manifest.json or HACS
-   Version: 1.0.6
+   Version: 1.1.0
    ```
 
 3. **Configuration** (sanitized):
