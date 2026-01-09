@@ -225,7 +225,11 @@ class HaAtreaRecuperationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _get_available_modbus_hubs(self) -> list[str]:
-        """Get list of available Modbus hubs that are not yet used by this integration."""
+        """Get list of available Modbus hubs.
+        
+        Note: A modbus hub can be reused with different unit IDs,
+        so we return all available hubs from the modbus integration.
+        """
         available_hubs = []
         
         # Get modbus hubs from hass.data
@@ -235,16 +239,7 @@ class HaAtreaRecuperationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         else:
             all_hub_names = []
 
-        # Get already used hubs
-        used_hubs = set()
-        for entry in self._async_current_entries():
-            if CONF_MODBUS_HUB in entry.data:
-                used_hubs.add(entry.data[CONF_MODBUS_HUB])
-
-        # Filter out used hubs
-        available_hubs = [hub for hub in all_hub_names if hub not in used_hubs]
-
-        return available_hubs
+        return all_hub_names
 
     def _generate_unique_id(self, data: dict[str, Any]) -> str:
         """Generate a unique ID for this device configuration."""
