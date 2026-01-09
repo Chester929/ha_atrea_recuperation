@@ -15,25 +15,32 @@ DOMAIN = "ha_atrea_recuperation"
 
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
     """Set up the number platform."""
-    # Get data from hass.data
-    hub = hass.data[DOMAIN]["hub"]
-    coordinator = hass.data[DOMAIN]["coordinator"]
-    name = hass.data[DOMAIN]["name"]
-
-    # Create number entity for target temperature (holding 1002)
-    async_add_entities([
-        HaAtreaNumber(
-            coordinator,
-            hub,
-            f"{name} Target Temperature",
-            1002,
-            scale=HOLDING_REGISTERS[1002]["scale"],
-            unit=HOLDING_REGISTERS[1002]["unit"],
-            writable=True,
-            min_value=-30.0,
-            max_value=90.0,
+    entities = []
+    
+    # Get all devices from hass.data
+    devices = hass.data[DOMAIN].get("devices", {})
+    
+    # Create number entity for each device
+    for device_key, device_data in devices.items():
+        hub = device_data["hub"]
+        coordinator = device_data["coordinator"]
+        name = device_data["name"]
+        
+        entities.append(
+            HaAtreaNumber(
+                coordinator,
+                hub,
+                f"{name} Target Temperature",
+                1002,
+                scale=HOLDING_REGISTERS[1002]["scale"],
+                unit=HOLDING_REGISTERS[1002]["unit"],
+                writable=True,
+                min_value=-30.0,
+                max_value=90.0,
+            )
         )
-    ])
+
+    async_add_entities(entities)
 
 
 class HaAtreaNumber(CoordinatorEntity, NumberEntity):
@@ -61,6 +68,7 @@ class HaAtreaNumber(CoordinatorEntity, NumberEntity):
         self._min = min_value
         self._max = max_value
         self._attr_unique_id = f"ha_atrea_number_{self._register}_{name.replace(' ', '_').lower()}"
+        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:

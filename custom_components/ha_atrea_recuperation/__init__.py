@@ -34,45 +34,65 @@ async def async_setup(hass: HomeAssistant, config: dict):
         _LOGGER.error("No configuration found for %s", DOMAIN)
         return True
 
-    name = conf.get("name", DEFAULT_NAME)
-    modbus_hub = conf.get("modbus_hub")  # name of HA modbus hub to reuse (recommended)
-    host = conf.get("modbus_host")  # fallback host if no HA modbus hub is used
-    port = int(conf.get("modbus_port", 502))
-    unit = int(conf.get("unit", 1))
-    poll = int(conf.get("poll_interval", 10))
-    hvac_map = conf.get("hvac_mode_labels", None)
-
-    hub = HaAtreaModbusHub(
-        hass,
-        name,
-        host=host,
-        port=port,
-        unit=unit,
-        modbus_hub_name=modbus_hub,
-        poll_interval=poll,
-        hvac_map=hvac_map,
-    )
-
-    # Create DataUpdateCoordinator
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name=f"{DOMAIN}_{name}",
-        update_method=hub.async_update,
-        update_interval=timedelta(seconds=poll),
-    )
-
-    # Perform initial refresh suitable for YAML-based integration
-    await coordinator.async_refresh()
-
-    # Store hub and coordinator in hass.data for platforms to access
+    # Initialize hass.data storage for this domain
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["hub"] = hub
-    hass.data[DOMAIN]["coordinator"] = coordinator
-    hass.data[DOMAIN]["name"] = name
-    hass.data[DOMAIN]["config"] = conf
+    hass.data[DOMAIN].setdefault("devices", {})
 
-    # Load platforms using discovery helper
+    # Support both single device (dict) and multiple devices (list) configuration
+    devices_config = []
+    if isinstance(conf, list):
+        # Multiple devices configuration
+        devices_config = conf
+    else:
+        # Single device configuration (backward compatibility)
+        devices_config = [conf]
+
+    # Set up each device
+    for device_conf in devices_config:
+        name = device_conf.get("name", DEFAULT_NAME)
+        modbus_hub = device_conf.get("modbus_hub")  # name of HA modbus hub to reuse (recommended)
+        host = device_conf.get("modbus_host")  # fallback host if no HA modbus hub is used
+        port = int(device_conf.get("modbus_port", 502))
+        unit = int(device_conf.get("unit", 1))
+        poll = int(device_conf.get("poll_interval", 10))
+        hvac_map = device_conf.get("hvac_mode_labels", None)
+
+        hub = HaAtreaModbusHub(
+            hass,
+            name,
+            host=host,
+            port=port,
+            unit=unit,
+            modbus_hub_name=modbus_hub,
+            poll_interval=poll,
+            hvac_map=hvac_map,
+        )
+
+        # Create DataUpdateCoordinator for this device
+        coordinator = DataUpdateCoordinator(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_{name}",
+            update_method=hub.async_update,
+            update_interval=timedelta(seconds=poll),
+        )
+
+        # Perform initial refresh suitable for YAML-based integration
+        await coordinator.async_refresh()
+
+        # Store hub and coordinator in hass.data for platforms to access
+        # Use device name as key to support multiple devices
+        device_key = name.lower().replace(" ", "_")
+        hass.data[DOMAIN]["devices"][device_key] = {
+            "hub": hub,
+            "coordinator": coordinator,
+            "name": name,
+            "config": device_conf,
+        }
+
+        _LOGGER.info("HA Atrea Recuperation device '%s' initialized", name)
+
+    # Load platforms using discovery helper (once for all devices)
     for platform in ("climate", "sensor", "select", "fan", "number", "button"):
         hass.async_create_task(
             discovery.async_load_platform(
@@ -84,5 +104,5 @@ async def async_setup(hass: HomeAssistant, config: dict):
             )
         )
 
-    _LOGGER.info("HA Atrea Recuperation integration initialized")
+    _LOGGER.info("HA Atrea Recuperation integration initialized with %d device(s)", len(devices_config))
     return True

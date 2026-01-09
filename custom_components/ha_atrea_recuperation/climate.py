@@ -16,13 +16,20 @@ DOMAIN = "ha_atrea_recuperation"
 
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
     """Set up the climate platform."""
-    # Get data from hass.data
-    hub = hass.data[DOMAIN]["hub"]
-    coordinator = hass.data[DOMAIN]["coordinator"]
-    name = hass.data[DOMAIN]["name"]
+    entities = []
+    
+    # Get all devices from hass.data
+    devices = hass.data[DOMAIN].get("devices", {})
+    
+    # Create climate entity for each device
+    for device_key, device_data in devices.items():
+        hub = device_data["hub"]
+        coordinator = device_data["coordinator"]
+        name = device_data["name"]
+        
+        entities.append(HaAtreaClimate(coordinator, hub, name))
 
-    # Create climate entity
-    async_add_entities([HaAtreaClimate(coordinator, hub, name)])
+    async_add_entities(entities)
 
 
 class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
@@ -33,6 +40,7 @@ class HaAtreaClimate(CoordinatorEntity, ClimateEntity):
         self._hub = hub
         self._name = name
         self._attr_unique_id = f"ha_atrea_climate_{name.replace(' ', '_').lower()}"
+        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:

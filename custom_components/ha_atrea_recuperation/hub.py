@@ -11,8 +11,11 @@ from datetime import timedelta
 import logging
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
+
+DOMAIN = "ha_atrea_recuperation"
 
 DEFAULT_HVAC_MAP = {
     0: "Off",
@@ -55,6 +58,41 @@ class HaAtreaModbusHub:
 
         # HA modbus hub will be retrieved lazily when needed
         self._ha_modbus_hub = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for device registry."""
+        # Try to get serial number from cache for unique identifier
+        serial = self._get_serial_number()
+        
+        # Use serial number if available, otherwise use name as identifier
+        identifier = serial if serial else self.name.lower().replace(" ", "_")
+        
+        return DeviceInfo(
+            identifiers={(DOMAIN, identifier)},
+            name=self.name,
+            manufacturer="Atrea",
+            model="DUPLEX Recuperation",
+            sw_version=None,  # Could be added if device reports firmware version
+        )
+
+    def _get_serial_number(self) -> str | None:
+        """Extract serial number from cached registers 3000-3008."""
+        try:
+            chars = []
+            for r in range(3000, 3009):
+                v = self._cache.get(r)
+                if v is None:
+                    return None
+                try:
+                    chars.append(chr(int(v)))
+                except Exception:
+                    return None
+            if chars:
+                serial = "".join(chars).strip()
+                return serial if serial else None
+        except Exception:
+            return None
 
     def _get_ha_modbus_hub(self):
         """Get the HA Modbus hub from hass.data if available.
