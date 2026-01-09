@@ -1,7 +1,7 @@
 # HA Atrea Recuperation
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
+[![Version](https://img.shields.io/badge/version-1.0.11-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
 
 Home Assistant integration for Atrea DUPLEX recuperation (heat recovery / ventilation) units via Modbus TCP. This custom component provides comprehensive control and monitoring of your Atrea recuperation system directly from Home Assistant.
 
@@ -21,7 +21,7 @@ Home Assistant integration for Atrea DUPLEX recuperation (heat recovery / ventil
 
 ## Status and Compatibility
 
-- **Current Version**: 1.0.8
+- **Current Version**: 1.0.11
 - **Minimum Home Assistant Version**: 2021.12.0
 - **Integration Type**: YAML-configured custom component
 - **IoT Class**: Local Polling
