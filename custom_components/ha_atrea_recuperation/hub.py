@@ -17,6 +17,10 @@ _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "ha_atrea_recuperation"
 
+# ASCII printable character range for register validation
+ASCII_PRINTABLE_MIN = 32
+ASCII_PRINTABLE_MAX = 126
+
 DEFAULT_HVAC_MAP = {
     0: "Off",
     1: "Auto",
@@ -87,76 +91,61 @@ class HaAtreaModbusHub:
             sw_version=sw_version,
         )
 
-    def _get_serial_number(self) -> str | None:
-        """Extract serial number from cached registers 3000-3008."""
+    @staticmethod
+    def _is_valid_ascii_char(value: int) -> bool:
+        """Check if value is in printable ASCII range."""
+        return ASCII_PRINTABLE_MIN <= value <= ASCII_PRINTABLE_MAX
+
+    def _read_string_from_registers(self, start_reg: int, end_reg: int, required: bool = False) -> str | None:
+        """Extract ASCII string from consecutive registers.
+
+        Args:
+            start_reg: First register to read
+            end_reg: Last register to read (exclusive)
+            required: If True, return None if any register is None; if False, stop at first None
+
+        Returns:
+            Extracted string or None
+        """
         try:
             chars = []
-            for r in range(3000, 3009):
+            for r in range(start_reg, end_reg):
                 v = self._cache.get(r)
                 if v is None:
-                    return None
+                    if required:
+                        return None
+                    break
+                if v == 0:
+                    # Null terminator, stop reading
+                    break
                 # Validate printable ASCII range
-                if not (32 <= int(v) <= 126):
-                    return None
+                if not self._is_valid_ascii_char(int(v)):
+                    if required:
+                        return None
+                    break
                 try:
                     chars.append(chr(int(v)))
                 except Exception:
-                    return None
+                    if required:
+                        return None
+                    break
             if chars:
-                serial = "".join(chars).strip()
-                return serial if serial else None
+                result = "".join(chars).strip()
+                return result if result else None
         except Exception:
             return None
+
+    def _get_serial_number(self) -> str | None:
+        """Extract serial number from cached registers 3000-3008."""
+        return self._read_string_from_registers(3000, 3009, required=True)
 
     def _get_model_name(self) -> str | None:
         """Extract model name from cached registers 3009-3019."""
-        try:
-            chars = []
-            for r in range(3009, 3020):
-                v = self._cache.get(r)
-                if v is None:
-                    # Model string might be shorter, break on first None
-                    break
-                if v == 0:
-                    # Null terminator, stop reading
-                    break
-                # Validate printable ASCII range
-                if not (32 <= int(v) <= 126):
-                    break
-                try:
-                    chars.append(chr(int(v)))
-                except Exception:
-                    break
-            if chars:
-                model = "".join(chars).strip()
-                return model if model else None
-        except Exception:
-            return None
+        return self._read_string_from_registers(3009, 3020, required=False)
 
     def _get_sw_version(self) -> str | None:
         """Extract SW version from cached registers 3100-3103."""
-        try:
-            chars = []
-            for r in range(3100, 3104):
-                v = self._cache.get(r)
-                if v is None:
-                    # Version string might be shorter, break on first None
-                    break
-                if v == 0:
-                    # Null terminator, stop reading
-                    break
-                # Validate printable ASCII range
-                if not (32 <= int(v) <= 126):
-                    break
-                try:
-                    chars.append(chr(int(v)))
-                except Exception:
-                    break
-            if chars:
-                version = "".join(chars).strip()
-                return version if version else None
-        except Exception:
-            return None
+        return self._read_string_from_registers(3100, 3104, required=False)
 
     def _get_ha_modbus_hub(self):
         """Get the HA Modbus hub from hass.data if available.
