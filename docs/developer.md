@@ -246,12 +246,12 @@ Follow Home Assistant integration best practices:
 
 ## Release Process & HACS
 
-1. Update `VERSION` file with new semantic version (e.g., `1.2.0`)
+1. Update `VERSION` file with new semantic version (e.g., `1.1.1`)
 2. Update `custom_components/ha_atrea_recuperation/manifest.json` version
 3. Add release notes to `docs/changelog.md`
 4. Run `bash scripts/bump_version.sh` to sync versions
-5. Commit changes: `git commit -m "Bump version to 1.2.0"`
-6. Tag release: `git tag v1.2.0`
+5. Commit changes: `git commit -m "Bump version to 1.1.1"`
+6. Tag release: `git tag v1.1.1`
 7. Push with tags: `git push && git push --tags`
 8. Create GitHub release from tag with changelog
 
