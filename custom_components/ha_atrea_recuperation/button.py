@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import COILS
@@ -11,15 +13,38 @@ from .const import COILS
 DOMAIN = "ha_atrea_recuperation"
 
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the button platform from a config entry."""
+    entities = []
+    device_data = hass.data[DOMAIN]["devices"][entry.entry_id]
+    hub = device_data["hub"]
+    coordinator = device_data["coordinator"]
+    name = device_data["name"]
+
+    # Buttons for coils
+    for coil_addr, coil_name in COILS.items():
+        entities.append(HaAtreaButton(coordinator, hub, f"{name} {coil_name}", coil_addr))
+
+    async_add_entities(entities)
+
+
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
-    """Set up the button platform."""
+    """Set up the button platform (YAML backward compatibility)."""
     entities = []
 
     # Get all devices from hass.data
     devices = hass.data[DOMAIN].get("devices", {})
 
-    # Create button entities for each device
+    # Create button entities for each device (skip config entry devices)
     for device_key, device_data in devices.items():
+        # Skip if this is a config entry device (has entry_id)
+        if "entry_id" in device_data:
+            continue
+            
         hub = device_data["hub"]
         coordinator = device_data["coordinator"]
         name = device_data["name"]

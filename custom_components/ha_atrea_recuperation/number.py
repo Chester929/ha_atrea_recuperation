@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Optional
 
 from homeassistant.components.number import NumberEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import HOLDING_REGISTERS
@@ -13,15 +15,45 @@ from .const import HOLDING_REGISTERS
 DOMAIN = "ha_atrea_recuperation"
 
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the number platform from a config entry."""
+    device_data = hass.data[DOMAIN]["devices"][entry.entry_id]
+    hub = device_data["hub"]
+    coordinator = device_data["coordinator"]
+    name = device_data["name"]
+
+    async_add_entities([
+        HaAtreaNumber(
+            coordinator,
+            hub,
+            f"{name} Target Temperature",
+            1002,
+            scale=HOLDING_REGISTERS[1002]["scale"],
+            unit=HOLDING_REGISTERS[1002]["unit"],
+            writable=True,
+            min_value=-30.0,
+            max_value=90.0,
+        )
+    ])
+
+
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
-    """Set up the number platform."""
+    """Set up the number platform (YAML backward compatibility)."""
     entities = []
 
     # Get all devices from hass.data
     devices = hass.data[DOMAIN].get("devices", {})
 
-    # Create number entity for each device
+    # Create number entity for each device (skip config entry devices)
     for device_key, device_data in devices.items():
+        # Skip if this is a config entry device (has entry_id)
+        if "entry_id" in device_data:
+            continue
+            
         hub = device_data["hub"]
         coordinator = device_data["coordinator"]
         name = device_data["name"]

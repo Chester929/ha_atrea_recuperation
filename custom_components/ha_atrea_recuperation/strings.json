@@ -1,0 +1,78 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add HA Atrea Recuperation Device",
+        "description": "Enter a name for your Atrea recuperation device.",
+        "data": {
+          "name": "Device Name"
+        }
+      },
+      "connection": {
+        "title": "Connection Type",
+        "description": "Choose how to connect to your Atrea device. Available Modbus hubs: {available_hubs}",
+        "data": {
+          "connection_type": "Connection Type"
+        },
+        "data_description": {
+          "connection_type": "Select 'modbus_hub' to use an existing Home Assistant Modbus integration, or 'direct' for a direct TCP connection."
+        }
+      },
+      "modbus_hub": {
+        "title": "Select Modbus Hub",
+        "description": "Select the Modbus hub to use for this device.",
+        "data": {
+          "modbus_hub": "Modbus Hub"
+        }
+      },
+      "direct_connection": {
+        "title": "Direct Connection",
+        "description": "Configure direct TCP connection to your Atrea device.",
+        "data": {
+          "host": "IP Address",
+          "port": "Port"
+        }
+      },
+      "device_config": {
+        "title": "Device Configuration",
+        "description": "Configure device parameters.",
+        "data": {
+          "unit": "Modbus Unit ID",
+          "poll_interval": "Poll Interval (seconds)"
+        },
+        "data_description": {
+          "unit": "Modbus slave/unit ID (typically 1)",
+          "poll_interval": "How often to poll the device (5-300 seconds)"
+        }
+      }
+    },
+    "error": {
+      "no_modbus_hubs": "No Modbus hubs available. Please configure the Modbus integration first or use direct connection.",
+      "cannot_connect": "Failed to connect to the device. Please check the IP address, port, and network connectivity.",
+      "invalid_unit": "Invalid Modbus unit ID. Must be between 1 and 247.",
+      "already_configured": "This device is already configured."
+    },
+    "abort": {
+      "already_configured": "This device is already configured with the same connection settings."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Atrea Recuperation Options",
+        "description": "Configure options for your Atrea device.",
+        "data": {
+          "poll_interval": "Poll Interval (seconds)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "connection_type": {
+      "options": {
+        "modbus_hub": "Use existing Modbus Hub",
+        "direct": "Direct TCP Connection"
+      }
+    }
+  }
+}
