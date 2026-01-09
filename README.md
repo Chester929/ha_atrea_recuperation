@@ -1,16 +1,19 @@
 # HA Atrea Recuperation
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.0.8-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
+[![Version](https://img.shields.io/badge/version-1.0.11-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
 
 Home Assistant integration for Atrea DUPLEX recuperation (heat recovery / ventilation) units via Modbus TCP. This custom component provides comprehensive control and monitoring of your Atrea recuperation system directly from Home Assistant.
 
 ## Features
 
+- **Multi-Device Support**: Configure multiple recuperation units with unique Modbus hubs or TCP connections
+- **Device Registry Integration**: All devices appear in Home Assistant's device list with proper grouping
 - **Climate Control**: Full thermostat functionality with target temperature control and HVAC mode mapping
 - **Operation Modes**: Select entity for precise device mode control (Off, Auto, Ventilation, Circulation, etc.)
 - **Fan Control**: Percentage-based fan speed control
 - **Comprehensive Sensors**: Temperature readings, airflow measurements, fan power, operating hours, and more
+- **Device Information**: Automatic detection of device model and software version from Modbus registers
 - **Reset Actions**: Button entities for filter reset, UV lamp reset, and state reset
 - **Platform-Based Architecture**: Uses Home Assistant's `async_setup_platform` for reliable entity registration
 - **Flexible Modbus Integration**: Can use Home Assistant's Modbus integration or standalone pymodbus fallback
@@ -18,7 +21,7 @@ Home Assistant integration for Atrea DUPLEX recuperation (heat recovery / ventil
 
 ## Status and Compatibility
 
-- **Current Version**: 1.0.8
+- **Current Version**: 1.0.11
 - **Minimum Home Assistant Version**: 2021.12.0
 - **Integration Type**: YAML-configured custom component
 - **IoT Class**: Local Polling
@@ -79,7 +82,7 @@ ha_atrea_recuperation:
   modbus_hub: modbus_atrea
   unit: 1
   poll_interval: 10
-  
+
   # Optional: Custom operation mode labels (default: English)
   hvac_mode_labels:
     0: "Off"
@@ -91,6 +94,104 @@ ha_atrea_recuperation:
     6: "Balancing"
     7: "Overpressure"
     8: "Undefined"
+```
+
+### Multiple Devices Configuration
+
+You can configure multiple recuperation units by providing a list of device configurations. Each device will appear as a separate device in Home Assistant with all its entities grouped together.
+
+#### Multiple devices with shared Modbus hub:
+
+```yaml
+# Configure Home Assistant's Modbus integration (recommended)
+modbus:
+  - name: modbus_atrea
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+# Configure multiple HA Atrea Recuperation devices
+ha_atrea_recuperation:
+  - name: "Atrea Ground Floor"
+    modbus_hub: modbus_atrea
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea First Floor"
+    modbus_hub: modbus_atrea
+    unit: 2
+    poll_interval: 10
+```
+
+#### Multiple devices with separate Modbus hubs:
+
+```yaml
+# Configure multiple Modbus hubs in Home Assistant
+modbus:
+  - name: modbus_atrea_building_a
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+  - name: modbus_atrea_building_b
+    type: tcp
+    host: 192.168.1.51
+    port: 502
+    timeout: 5
+
+# Each device uses its own Modbus hub
+ha_atrea_recuperation:
+  - name: "Atrea Building A"
+    modbus_hub: modbus_atrea_building_a
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Building B"
+    modbus_hub: modbus_atrea_building_b
+    unit: 1
+    poll_interval: 10
+```
+
+#### Multiple devices with separate TCP connections:
+
+```yaml
+ha_atrea_recuperation:
+  - name: "Atrea Building A"
+    modbus_host: 192.168.1.50
+    modbus_port: 502
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Building B"
+    modbus_host: 192.168.1.51
+    modbus_port: 502
+    unit: 1
+    poll_interval: 10
+```
+
+#### Mixed configuration (hub + direct TCP):
+
+```yaml
+modbus:
+  - name: modbus_atrea_main
+    type: tcp
+    host: 192.168.1.50
+    port: 502
+    timeout: 5
+
+ha_atrea_recuperation:
+  - name: "Atrea Main Building"
+    modbus_hub: modbus_atrea_main
+    unit: 1
+    poll_interval: 10
+
+  - name: "Atrea Remote Site"
+    modbus_host: 192.168.2.100
+    modbus_port: 502
+    unit: 1
+    poll_interval: 15
 ```
 
 ### Fallback Configuration (without HA Modbus integration)
@@ -118,6 +219,27 @@ ha_atrea_recuperation:
 
 *Either `modbus_hub` or `modbus_host` must be provided.
 
+## Device Registry Integration
+
+All configured recuperation units appear as devices in Home Assistant's device registry. Each device groups all its entities (climate, sensors, fan, select, number, buttons) for easy management.
+
+### Device Information
+
+Each device displays the following information in Home Assistant:
+- **Name**: The configured device name
+- **Manufacturer**: Atrea
+- **Model**: Automatically detected from Modbus registers (3009-3019) or defaults to "DUPLEX Recuperation"
+- **Software Version**: Automatically detected from Modbus registers (3100-3103)
+- **Serial Number**: Read from Modbus registers (3000-3008)
+- **Identifiers**: Uses serial number or device name for unique identification
+
+### Device Benefits
+
+- **Organized Entity View**: All entities for a device are grouped together
+- **Device Actions**: Perform actions on all entities of a device at once
+- **Diagnostics**: View device status and information in one place
+- **Automation**: Easier to create automations targeting specific devices
+
 ## Platform-Based Architecture
 
 This integration was refactored in PR #2 to use Home Assistant's platform-based architecture with `async_setup_platform` for reliable entity registration. The integration loads the following platforms:
@@ -137,6 +259,14 @@ Each platform is loaded via Home Assistant's discovery mechanism and registers e
 
 **Entity ID**: `climate.<name>`
 
+The climate entity provides thermostat-style control for Atrea DUPLEX recuperation units. These devices support temperature control through integrated preheaters and reheaters, making the climate entity highly relevant for:
+
+- **Temperature Control**: Set desired supply air temperature
+- **Heating Modes**: Utilize integrated electric or water-based heaters
+- **Seasonal Operation**: Automatic bypass for cooling in summer
+- **Night Cooling**: Precooling mode for energy efficiency
+
+Features:
 - Current temperature from input register 1104
 - Target temperature (read/write) from holding register 1002
 - HVAC modes mapped from device operation mode

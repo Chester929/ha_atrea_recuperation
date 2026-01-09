@@ -13,16 +13,20 @@ DOMAIN = "ha_atrea_recuperation"
 
 async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
     """Set up the button platform."""
-    # Get data from hass.data
-    hub = hass.data[DOMAIN]["hub"]
-    coordinator = hass.data[DOMAIN]["coordinator"]
-    name = hass.data[DOMAIN]["name"]
-
     entities = []
 
-    # Buttons for coils
-    for coil_addr, coil_name in COILS.items():
-        entities.append(HaAtreaButton(coordinator, hub, f"{name} {coil_name}", coil_addr))
+    # Get all devices from hass.data
+    devices = hass.data[DOMAIN].get("devices", {})
+
+    # Create button entities for each device
+    for device_key, device_data in devices.items():
+        hub = device_data["hub"]
+        coordinator = device_data["coordinator"]
+        name = device_data["name"]
+
+        # Buttons for coils
+        for coil_addr, coil_name in COILS.items():
+            entities.append(HaAtreaButton(coordinator, hub, f"{name} {coil_name}", coil_addr))
 
     async_add_entities(entities)
 
@@ -35,7 +39,10 @@ class HaAtreaButton(CoordinatorEntity, ButtonEntity):
         self._hub = hub
         self._name = name
         self._coil = int(coil_addr)
-        self._attr_unique_id = f"ha_atrea_coil_{self._coil}"
+        # Include device name in unique_id to avoid conflicts with multiple devices
+        device_id = hub.name.lower().replace(" ", "_")
+        self._attr_unique_id = f"ha_atrea_{device_id}_coil_{self._coil}"
+        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:

@@ -11,8 +11,15 @@ from datetime import timedelta
 import logging
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
+
+DOMAIN = "ha_atrea_recuperation"
+
+# ASCII printable character range for register validation
+ASCII_PRINTABLE_MIN = 32
+ASCII_PRINTABLE_MAX = 126
 
 DEFAULT_HVAC_MAP = {
     0: "Off",
@@ -55,6 +62,90 @@ class HaAtreaModbusHub:
 
         # HA modbus hub will be retrieved lazily when needed
         self._ha_modbus_hub = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for device registry."""
+        # Try to get serial number from cache for unique identifier
+        serial = self._get_serial_number()
+
+        # Try to get model name from cache
+        model = self._get_model_name()
+
+        # Try to get SW version from cache
+        sw_version = self._get_sw_version()
+
+        # Use serial number if available, otherwise use name + host/port + unit as identifier
+        if serial:
+            identifier = serial
+        else:
+            # Include host/port and unit to ensure uniqueness
+            host_part = self.host or self.modbus_hub_name or "unknown"
+            identifier = f"{self.name}_{host_part}_{self.unit}".lower().replace(" ", "_")
+
+        return DeviceInfo(
+            identifiers={(DOMAIN, identifier)},
+            name=self.name,
+            manufacturer="Atrea",
+            model=model if model else "DUPLEX Recuperation",
+            sw_version=sw_version,
+        )
+
+    @staticmethod
+    def _is_valid_ascii_char(value: int) -> bool:
+        """Check if value is in printable ASCII range."""
+        return ASCII_PRINTABLE_MIN <= value <= ASCII_PRINTABLE_MAX
+
+    def _read_string_from_registers(self, start_reg: int, end_reg: int, required: bool = False) -> str | None:
+        """Extract ASCII string from consecutive registers.
+
+        Args:
+            start_reg: First register to read
+            end_reg: Last register to read (exclusive)
+            required: If True, return None if any register is None; if False, stop at first None
+
+        Returns:
+            Extracted string or None
+        """
+        try:
+            chars = []
+            for r in range(start_reg, end_reg):
+                v = self._cache.get(r)
+                if v is None:
+                    if required:
+                        return None
+                    break
+                if v == 0:
+                    # Null terminator, stop reading
+                    break
+                # Validate printable ASCII range
+                if not self._is_valid_ascii_char(int(v)):
+                    if required:
+                        return None
+                    break
+                try:
+                    chars.append(chr(int(v)))
+                except Exception:
+                    if required:
+                        return None
+                    break
+            if chars:
+                result = "".join(chars).strip()
+                return result if result else None
+        except Exception:
+            return None
+
+    def _get_serial_number(self) -> str | None:
+        """Extract serial number from cached registers 3000-3008."""
+        return self._read_string_from_registers(3000, 3009, required=True)
+
+    def _get_model_name(self) -> str | None:
+        """Extract model name from cached registers 3009-3019."""
+        return self._read_string_from_registers(3009, 3020, required=False)
+
+    def _get_sw_version(self) -> str | None:
+        """Extract SW version from cached registers 3100-3103."""
+        return self._read_string_from_registers(3100, 3104, required=False)
 
     def _get_ha_modbus_hub(self):
         """Get the HA Modbus hub from hass.data if available.
@@ -104,8 +195,9 @@ class HaAtreaModbusHub:
                 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014,
                 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1110, 1111, 1112, 1113, 1114,
                 1201, 1202, 1203, 1204, 1205, 1206,
-                3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008,
-                3100, 3101, 3102, 3103,
+                3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008,  # Serial number
+                3009, 3010, 3011, 3012, 3013, 3014, 3015, 3016, 3017, 3018, 3019,  # Model
+                3100, 3101, 3102, 3103,  # SW version
                 3200, 3201, 3202, 3203, 3204, 3205,
                 7103, 7104, 7105,
                 # holdings (we read a selected set here)
