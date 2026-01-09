@@ -78,7 +78,9 @@ class HaAtreaSensor(CoordinatorEntity, SensorEntity):
         self._scale = float(scale)
         self._unit = unit
         self._holding = holding
-        self._attr_unique_id = f"ha_atrea_sensor_{self._register}_{name.replace(' ', '_').lower()}"
+        # Include device name in unique_id to avoid conflicts with multiple devices
+        device_id = hub.name.lower().replace(" ", "_")
+        self._attr_unique_id = f"ha_atrea_{device_id}_sensor_{self._register}_{name.replace(' ', '_').lower()}"
         self._attr_device_info = hub.device_info
 
     @property

@@ -34,7 +34,9 @@ class OperationModeSelect(CoordinatorEntity, SelectEntity):
         super().__init__(coordinator)
         self._hub = hub
         self._name = name
-        self._attr_unique_id = f"ha_atrea_opmode_{name.replace(' ', '_').lower()}"
+        # Include device name in unique_id to avoid conflicts with multiple devices
+        device_id = hub.name.lower().replace(" ", "_")
+        self._attr_unique_id = f"ha_atrea_{device_id}_opmode"
         self._attr_device_info = hub.device_info
 
     @property
