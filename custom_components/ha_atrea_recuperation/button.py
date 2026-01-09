@@ -42,11 +42,15 @@ class HaAtreaButton(CoordinatorEntity, ButtonEntity):
         # Include device name in unique_id to avoid conflicts with multiple devices
         device_id = hub.name.lower().replace(" ", "_")
         self._attr_unique_id = f"ha_atrea_{device_id}_coil_{self._coil}"
-        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def device_info(self):
+        """Return device info to link this entity to the device."""
+        return self._hub.device_info
 
     async def async_press(self) -> None:
         await self._hub.write_coil_pulse(self._coil, pulse_ms=500)

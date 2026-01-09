@@ -70,11 +70,15 @@ class HaAtreaNumber(CoordinatorEntity, NumberEntity):
         # Include device name in unique_id to avoid conflicts with multiple devices
         device_id = hub.name.lower().replace(" ", "_")
         self._attr_unique_id = f"ha_atrea_{device_id}_number_{self._register}"
-        self._attr_device_info = hub.device_info
 
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def device_info(self):
+        """Return device info to link this entity to the device."""
+        return self._hub.device_info
 
     @property
     def native_unit_of_measurement(self) -> str | None:
