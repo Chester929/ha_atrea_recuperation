@@ -1,16 +1,19 @@
 # HA Atrea Recuperation
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.0.8-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/Chester929/ha_atrea_recuperation/releases)
 
 Home Assistant integration for Atrea DUPLEX recuperation (heat recovery / ventilation) units via Modbus TCP. This custom component provides comprehensive control and monitoring of your Atrea recuperation system directly from Home Assistant.
 
 ## Features
 
+- **Multi-Device Support**: Configure multiple recuperation units with unique Modbus hubs or TCP connections
+- **Device Registry Integration**: All devices appear in Home Assistant's device list with proper grouping
 - **Climate Control**: Full thermostat functionality with target temperature control and HVAC mode mapping
 - **Operation Modes**: Select entity for precise device mode control (Off, Auto, Ventilation, Circulation, etc.)
 - **Fan Control**: Percentage-based fan speed control
 - **Comprehensive Sensors**: Temperature readings, airflow measurements, fan power, operating hours, and more
+- **Device Information**: Automatic detection of device model and software version from Modbus registers
 - **Reset Actions**: Button entities for filter reset, UV lamp reset, and state reset
 - **Platform-Based Architecture**: Uses Home Assistant's `async_setup_platform` for reliable entity registration
 - **Flexible Modbus Integration**: Can use Home Assistant's Modbus integration or standalone pymodbus fallback
@@ -186,6 +189,27 @@ ha_atrea_recuperation:
 
 *Either `modbus_hub` or `modbus_host` must be provided.
 
+## Device Registry Integration
+
+All configured recuperation units appear as devices in Home Assistant's device registry. Each device groups all its entities (climate, sensors, fan, select, number, buttons) for easy management.
+
+### Device Information
+
+Each device displays the following information in Home Assistant:
+- **Name**: The configured device name
+- **Manufacturer**: Atrea
+- **Model**: Automatically detected from Modbus registers (3009-3019) or defaults to "DUPLEX Recuperation"
+- **Software Version**: Automatically detected from Modbus registers (3100-3103)
+- **Serial Number**: Read from Modbus registers (3000-3008)
+- **Identifiers**: Uses serial number or device name for unique identification
+
+### Device Benefits
+
+- **Organized Entity View**: All entities for a device are grouped together
+- **Device Actions**: Perform actions on all entities of a device at once
+- **Diagnostics**: View device status and information in one place
+- **Automation**: Easier to create automations targeting specific devices
+
 ## Platform-Based Architecture
 
 This integration was refactored in PR #2 to use Home Assistant's platform-based architecture with `async_setup_platform` for reliable entity registration. The integration loads the following platforms:
@@ -205,6 +229,14 @@ Each platform is loaded via Home Assistant's discovery mechanism and registers e
 
 **Entity ID**: `climate.<name>`
 
+The climate entity provides thermostat-style control for Atrea DUPLEX recuperation units. These devices support temperature control through integrated preheaters and reheaters, making the climate entity highly relevant for:
+
+- **Temperature Control**: Set desired supply air temperature
+- **Heating Modes**: Utilize integrated electric or water-based heaters
+- **Seasonal Operation**: Automatic bypass for cooling in summer
+- **Night Cooling**: Precooling mode for energy efficiency
+
+Features:
 - Current temperature from input register 1104
 - Target temperature (read/write) from holding register 1002
 - HVAC modes mapped from device operation mode
