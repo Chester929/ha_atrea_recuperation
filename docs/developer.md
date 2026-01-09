@@ -38,7 +38,8 @@ Since version 1.0.6, the integration uses Home Assistant's platform-based archit
 ├─ requirements.txt       # Python dependencies
 ├─ scripts/               # Helper scripts
 │  ├─ bump_version.sh    # Version bumping utility
-│  └─ pre_release_checks.sh  # Pre-release validation
+│  ├─ pre_release_checks.sh  # Pre-release validation
+│  └─ validate_hacs_config.sh  # HACS configuration validator
 ├─ custom_components/ha_atrea_recuperation/
 │  ├── manifest.json      # Integration metadata and dependencies
 │  ├── __init__.py        # Main integration setup, coordinator creation
@@ -245,6 +246,34 @@ Follow Home Assistant integration best practices:
 - Add entry to `docs/changelog.md`
 
 ## Release Process & HACS
+
+### HACS Configuration
+
+This repository is configured for HACS as a **Custom Integration** with:
+- `content_in_root: false` - Integration code is in `custom_components/ha_atrea_recuperation/`
+- `zip_release: false` - Source-based installation
+- `filename: "custom_components/ha_atrea_recuperation/manifest.json"` - Points to manifest
+
+**Important**: Do NOT change `content_in_root` to `true`. See `.hacs.md` for detailed explanation.
+
+### Validating HACS Configuration
+
+Before making releases or significant changes, validate HACS configuration:
+
+```bash
+./scripts/validate_hacs_config.sh
+```
+
+This checks:
+- `hacs.json` is valid JSON
+- `content_in_root` is set to `false`
+- Manifest file exists and is valid
+- No `www/` directory exists (correct for integrations)
+- Integration code is in correct location
+
+The pre-release checks script automatically runs HACS validation.
+
+### Release Process
 
 1. Update `VERSION` file with new semantic version (e.g., `1.1.1`)
 2. Update `custom_components/ha_atrea_recuperation/manifest.json` version

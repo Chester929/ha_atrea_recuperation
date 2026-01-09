@@ -176,5 +176,17 @@ else
   warn "docs/changelog.md not found (optional)."
 fi
 
+# 10) Run HACS configuration validation
+HACS_VALIDATOR="$REPO_ROOT/scripts/validate_hacs_config.sh"
+if [ -f "$HACS_VALIDATOR" ] && [ -x "$HACS_VALIDATOR" ]; then
+  info "Running HACS configuration validation..."
+  if ! "$HACS_VALIDATOR" >/dev/null 2>&1; then
+    fail "HACS configuration validation failed. Run scripts/validate_hacs_config.sh for details."
+  fi
+  info "HACS configuration is valid."
+else
+  warn "HACS validator script not found or not executable at $HACS_VALIDATOR"
+fi
+
 info "All pre-release checks passed."
 exit 0
